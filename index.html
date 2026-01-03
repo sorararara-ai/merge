@@ -1,1107 +1,1345 @@
-<!DOCTYPE html>  
-<html lang="ja">  
-<head>  
-    <meta charset="UTF-8">  
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">  
-    <title>giftee Merge(差し込み書類作成システム)</title>  
-    <!-- Tailwind CSS -->  
-    <script src="https://cdn.tailwindcss.com"></script>  
-    <!-- Lucide Icons -->  
-    <script src="https://unpkg.com/lucide@latest"></script>  
-    <!-- QRious (QR Code Library) -->  
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>  
-    <!-- PDF.js (PDF Reading) -->  
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>  
-    <!-- jsPDF & html2canvas (PDF Generation) -->  
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>  
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>  
-  
-    <script>  
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';  
-    </script>  
-  
-    <style>  
-        :root {  
-            --color-primary: #0C6A94;  
-            --color-secondary: #5098C4;  
-            --color-text: #576369;  
-            --color-bg: #E1F3F7;  
-            --color-white: #FFFFFF;  
-        }  
-  
-        body {  
-            background-color: var(--color-bg);  
-            color: var(--color-text);  
-            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;  
-        }  
-  
-        .fade-in { animation: fadeIn 0.3s ease-out; }  
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }  
-          
-        /* エディタ上の要素スタイル (DOMベース) */  
-        .editor-item {  
-            position: absolute;  
-            transform: translate(-50%, -50%);  
-            cursor: grab;  
-            user-select: none;  
-            border: 1px dashed transparent;  
-            transition: border-color 0.1s;  
-        }  
-        .editor-item:hover {  
-            border-color: rgba(12, 106, 148, 0.5);  
-            background-color: rgba(255, 255, 255, 0.3);  
-            z-index: 50;  
-        }  
-        .editor-item.active {  
-            border-color: #0C6A94;  
-            border-style: solid;  
-            background-color: rgba(255, 255, 255, 0.4);  
-            z-index: 100;  
-        }  
-          
-        /* リサイズハンドル (右上に配置) */  
-        .resize-handle {  
-            width: 16px; height: 16px;  
-            background-color: #0C6A94; border: 2px solid white; border-radius: 50%;  
-            position: absolute;   
-            top: -8px;   
-            right: -8px;  
-            cursor: ne-resize;  
-            z-index: 101;  
-            display: none; box-shadow: 0 2px 4px rgba(0,0,0,0.2);  
-        }  
-        .editor-item.active .resize-handle { display: block; }  
-  
-        /* レンダリング用隠しステージ */  
-        #render-stage {  
-            position: fixed;  
-            top: 0;   
-            left: -20000px;  
-            z-index: -100;  
-            background-color: white;  
-        }  
-    </style>  
-</head>  
-<body>  
-  
-    <!-- ヘッダー -->  
-    <header class="p-4 shadow-md bg-white sticky top-0 z-50">  
-        <div class="max-w-6xl mx-auto flex justify-between items-center">  
-            <div class="flex items-center gap-2 cursor-pointer" onclick="app.resetAll()">  
-                <!-- アイコンとProバッジを削除 -->  
-                <h1 class="text-xl font-bold" style="color: var(--color-primary);">giftee Merge(差し込み書類作成システム)</h1>  
-            </div>  
+<!DOCTYPE html>    
+<html lang="ja">    
+<head>    
+    <meta charset="UTF-8">    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">    
+    <title>giftee Merge(差し込み書類作成システム)</title>    
+    <!-- Tailwind CSS -->    
+    <script src="https://cdn.tailwindcss.com"></script>    
+    <!-- Lucide Icons -->    
+    <script src="https://unpkg.com/lucide@latest"></script>    
+    <!-- QRious (QR Code Library) -->    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>    
+    <!-- PDF.js (PDF Reading) -->    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>    
+    <!-- jsPDF & html2canvas (PDF Generation) -->    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>    
+    
+    <script>    
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';    
+    </script>    
+    
+    <style>    
+        :root {    
+            --color-primary: #0C6A94;    
+            --color-secondary: #5098C4;    
+            --color-text: #576369;    
+            --color-bg: #E1F3F7;    
+            --color-white: #FFFFFF;    
+        }    
+    
+        body {    
+            background-color: var(--color-bg);    
+            color: var(--color-text);    
+            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;    
+        }    
+    
+        .fade-in { animation: fadeIn 0.3s ease-out; }    
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }    
+            
+        /* エディタ上の要素スタイル (DOMベース) */    
+        .editor-item {    
+            position: absolute;    
+            transform: translate(-50%, -50%);    
+            cursor: grab;    
+            user-select: none;    
+            border: 1px dashed transparent;    
+            transition: border-color 0.1s;    
+        }    
+        .editor-item:hover {    
+            border-color: rgba(12, 106, 148, 0.5);    
+            background-color: rgba(255, 255, 255, 0.3);    
+            z-index: 50;    
+        }    
+        .editor-item.active {    
+            border-color: #0C6A94;    
+            border-style: solid;    
+            background-color: rgba(255, 255, 255, 0.4);    
+            z-index: 100;    
+        }    
+            
+        /* リサイズハンドル (右上に配置) */    
+        .resize-handle {    
+            width: 16px; height: 16px;    
+            background-color: #0C6A94; border: 2px solid white; border-radius: 50%;    
+            position: absolute;     
+            top: -8px;     
+            right: -8px;    
+            cursor: ne-resize;    
+            z-index: 101;    
+            display: none; box-shadow: 0 2px 4px rgba(0,0,0,0.2);    
+        }    
+        .editor-item.active .resize-handle { display: block; }    
+    
+        /* レンダリング用隠しステージ */    
+        #render-stage {    
+            position: fixed;    
+            top: 0;     
+            left: -20000px;    
+            z-index: -100;    
+            background-color: white;    
+        }    
+    </style>    
+</head>    
+<body>    
+    
+    <!-- ヘッダー -->    
+    <header class="p-4 shadow-md bg-white sticky top-0 z-50">    
+        <div class="max-w-6xl mx-auto flex justify-between items-center">    
+            <div class="flex items-center gap-2 cursor-pointer" onclick="app.resetAll()">    
+                <!-- アイコンとProバッジを削除 -->    
+                <h1 class="text-xl font-bold" style="color: var(--color-primary);">giftee Merge(差し込み書類作成システム)</h1>    
+            </div>    
+                
+            <div class="flex items-center gap-2 text-sm font-medium hidden md:flex">    
+                <div id="step-nav-1" class="px-3 py-1 rounded-full bg-white border border-gray-200 text-gray-500">1. テンプレート</div>    
+                <span class="text-gray-300">→</span>    
+                <div id="step-nav-2" class="px-3 py-1 rounded-full bg-white border border-gray-200 text-gray-500">2. データ</div>    
+                <span class="text-gray-300">→</span>    
+                <div id="step-nav-3" class="px-3 py-1 rounded-full bg-white border border-gray-200 text-gray-500">3. レイアウト</div>    
+                <span class="text-gray-300">→</span>    
+                <div id="step-nav-4" class="px-3 py-1 rounded-full bg-white border border-gray-200 text-gray-500">4. 出力設定</div>    
+            </div>    
+        </div>    
+    </header>    
+    
+    <main class="max-w-6xl mx-auto p-6 pb-20">    
+    
+        <!-- STEP 1: テンプレート準備 -->    
+        <div id="view-template" class="fade-in">    
+            <div class="flex justify-center">    
+                <div class="w-full max-w-2xl bg-white p-8 rounded-xl shadow-lg border-2 border-dashed border-gray-300 flex flex-col items-center text-center transition hover:border-blue-400" id="drop-area-img">    
+                    <div class="mb-4 p-4 rounded-full bg-blue-50">    
+                        <i data-lucide="upload" class="text-blue-500 w-12 h-12"></i>    
+                    </div>    
+                    <h3 class="text-lg font-bold mb-2">テンプレート画像をアップロード</h3>    
+                    <p class="text-sm text-gray-500 mb-6">PDF / JPG / PNG</p>    
+                    <label class="cursor-pointer px-8 py-4 rounded-full text-white font-bold shadow-md transition transform hover:scale-105" style="background-color: var(--color-primary);">    
+                        ファイルを選択    
+                        <input type="file" accept="application/pdf, image/jpeg, image/png" class="hidden" onchange="app.handleTemplateUpload(event)">    
+                    </label>    
+                    <p id="template-filename" class="mt-4 text-sm font-bold text-gray-700 hidden"></p>    
+                    <div id="loading-pdf" class="hidden mt-2 text-blue-600 text-sm font-bold animate-pulse">PDFを変換中...</div>    
+                    <div class="mt-8 w-full flex justify-center">    
+                        <button id="btn-next-step1" disabled onclick="app.setStep(2)" class="px-12 py-3 rounded-lg bg-gray-300 text-white font-bold cursor-not-allowed transition-colors">次に進む</button>    
+                    </div>    
+                </div>    
+            </div>    
+        </div>    
+    
+        <!-- STEP 2: データ定義 -->    
+        <div id="view-data" class="hidden fade-in">    
+            <h2 class="text-2xl font-bold mb-6 text-center" style="color: var(--color-primary);">差し込みデータの準備</h2>    
+            <div class="grid md:grid-cols-2 gap-8">    
+                <div class="bg-white p-8 rounded-xl shadow-lg flex flex-col items-center text-center">    
+                    <i data-lucide="table" class="text-gray-400 w-10 h-10 mb-4"></i>    
+                    <h3 class="text-lg font-bold mb-4">差し込みデータのアップロード</h3>    
+                    <div class="text-sm text-gray-500 mb-4 text-left inline-block">    
+                        <p class="mb-1">・各差し込み要素毎に列を作成してください。</p>    
+                        <p class="mb-1">・各列の1行目には要素名を入れてください。<br><span class="text-xs text-gray-400 ml-4">例) URL, 氏名, 株主番号, etc...</span></p>    
+                        <p>・CSVファイルのみアップロード可能です。</p>    
+                    </div>    
+                    <label class="cursor-pointer px-6 py-2 rounded-full border border-gray-300 font-bold hover:bg-gray-50 transition">    
+                        CSVファイルを選択    
+                        <input type="file" accept=".csv,text/csv" class="hidden" onchange="app.handleCsvUpload(event)">    
+                    </label>    
+                    <p id="csv-status" class="mt-4 text-sm font-bold text-green-600 hidden"></p>    
+                </div>    
+    
+                <div id="column-settings" class="bg-white p-6 rounded-xl shadow-lg opacity-50 pointer-events-none transition-opacity">    
+                    <h3 class="text-lg font-bold mb-4 border-b pb-2">差し込み要素のマッピング</h3>    
+                    <div class="flex gap-2 mb-4">    
+                        <select id="select-csv-col" class="flex-1 p-2 border rounded bg-gray-50 text-sm"><option value="">列を選択...</option></select>    
+                        <!-- 変更点: 文言変更に伴い幅を自動調整 (w-32 -> w-auto) -->    
+                        <select id="select-item-type" class="w-auto p-2 border rounded bg-gray-50 text-sm">    
+                            <option value="text">テキスト差し込み</option>    
+                            <option value="qr">二次元コード化差し込み</option>    
+                        </select>    
+                        <button onclick="app.addItemConfig()" class="text-white px-4 py-2 rounded text-sm font-bold hover:opacity-90 transition" style="background-color: var(--color-primary);">追加</button>    
+                    </div>    
+                    <div class="bg-gray-50 rounded border p-2 min-h-[150px] max-h-[300px] overflow-y-auto">    
+                        <ul id="config-items-list" class="space-y-2">    
+                            <li class="text-gray-400 text-xs text-center py-4">要素を追加してください</li>    
+                        </ul>    
+                    </div>    
+                </div>    
+            </div>    
+            <div class="mt-8 flex justify-center gap-4">    
+                <button onclick="app.setStep(1)" class="px-6 py-3 rounded-lg text-gray-500 hover:bg-gray-100 bg-white border border-gray-300">戻る</button>    
+                <button id="btn-go-layout" disabled onclick="app.setStep(3)" class="px-8 py-3 rounded-lg bg-gray-300 text-white font-bold cursor-not-allowed transition-colors">次に進む</button>    
+            </div>    
+        </div>    
+    
+        <!-- STEP 3: レイアウト編集 -->    
+        <div id="view-layout" class="hidden fade-in">    
+            <div class="flex flex-col lg:flex-row gap-6 h-[80vh]">    
+                <!-- キャンバス -->    
+                <div class="flex-1 bg-gray-200 rounded-xl overflow-auto flex justify-center items-center relative p-8">    
+                    <div id="editor-canvas" class="relative bg-white shadow-2xl transition-transform origin-center">    
+                        <img id="editor-bg" src="" class="block pointer-events-none select-none max-w-full" style="max-height: 70vh;">    
+                        <div id="editor-elements-layer" class="absolute inset-0"></div>    
+                    </div>    
+                </div>    
+    
+                <!-- プロパティパネル -->    
+                <div class="w-full lg:w-80 bg-white p-6 rounded-xl shadow-lg flex flex-col overflow-y-auto">    
+                    <h3 class="text-lg font-bold mb-4 border-b pb-2 flex items-center gap-2">    
+                        <i data-lucide="settings-2" class="w-5 h-5"></i> 要素の設定    
+                    </h3>    
+                    <div id="property-panel-content">    
+                        <p class="text-sm text-gray-400 text-center py-8">要素を選択すると詳細設定が表示されます</p>    
+                    </div>    
+                        
+                    <div class="mt-auto pt-6 border-t flex flex-col gap-3">    
+                        <button onclick="app.setStep(4)" class="w-full py-3 rounded-lg text-white font-bold shadow hover:opacity-90 transition" style="background-color: var(--color-primary);">次に進む (出力)</button>    
+                        <button onclick="app.setStep(2)" class="w-full py-2 text-sm text-gray-600 hover:bg-gray-50 rounded border border-gray-300">戻る</button>    
+                    </div>    
+                </div>    
+            </div>    
+        </div>    
+    
+        <!-- STEP 4: 出力設定 -->    
+        <div id="view-preview" class="hidden fade-in">    
+            <h2 class="text-2xl font-bold mb-6 text-center" style="color: var(--color-primary);">PDF出力設定</h2>    
+    
+            <div class="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">    
+                <!-- 設定パネル -->    
+                <div class="bg-white p-8 rounded-xl shadow-lg">    
+                    <h3 class="text-lg font-bold mb-4 flex items-center gap-2">    
+                        <i data-lucide="printer" class="w-5 h-5 text-blue-600"></i> 出力オプション    
+                    </h3>    
+    
+                    <div class="space-y-6">    
+                        <!-- 用紙設定グループ -->    
+                        <div class="space-y-4 border-b pb-4">    
+                            <div>    
+                                <label class="block text-sm font-bold text-gray-700 mb-1">用紙サイズ</label>    
+                                <select id="opt-paper-size" onchange="app.updatePreviewSettings()" class="w-full p-2 border rounded bg-gray-50">    
+                                    <optgroup label="A判 (ISO/JIS)">    
+                                        <option value="a3">A3 (297 x 420 mm)</option>    
+                                        <option value="a4" selected>A4 (210 x 297 mm)</option>    
+                                        <option value="a5">A5 (148 x 210 mm)</option>    
+                                    </optgroup>    
+                                    <optgroup label="B判 (JIS)">    
+                                        <option value="b4">B4 (257 x 364 mm)</option>    
+                                        <option value="b5">B5 (182 x 257 mm)</option>    
+                                    </optgroup>    
+                                    <optgroup label="その他">    
+                                        <option value="letter">Letter</option>    
+                                        <option value="postcard">はがき</option>    
+                                    </optgroup>    
+                                </select>    
+                            </div>    
+                                
+                            <div>    
+                                <label class="block text-sm font-bold text-gray-700 mb-2">用紙の向き</label>    
+                                <div class="flex gap-4">    
+                                    <label class="flex items-center gap-2 cursor-pointer bg-gray-50 px-4 py-2 rounded hover:bg-gray-100 border">    
+                                        <input type="radio" name="opt-orientation" value="portrait" checked onchange="app.updatePreviewSettings()" class="text-blue-600">    
+                                        <span>縦 (Portrait)</span>    
+                                    </label>    
+                                    <label class="flex items-center gap-2 cursor-pointer bg-gray-50 px-4 py-2 rounded hover:bg-gray-100 border">    
+                                        <input type="radio" name="opt-orientation" value="landscape" onchange="app.updatePreviewSettings()" class="text-blue-600">    
+                                        <span>横 (Landscape)</span>    
+                                    </label>    
+                                </div>    
+                            </div>    
+                        </div>    
+    
+                        <!-- トンボ・塗り足しグループ -->    
+                        <div class="space-y-4">    
+                            <div class="bg-blue-50 p-3 rounded-lg border border-blue-100">    
+                                <label class="flex items-center gap-3 cursor-pointer">    
+                                    <input type="checkbox" id="opt-cropmarks" class="w-5 h-5 text-blue-600 rounded" onchange="app.updatePreviewSettings()">    
+                                    <div>    
+                                        <span class="font-bold text-gray-800 text-sm">トンボ（トリムマーク）を付ける</span>    
+                                        <p class="text-xs text-gray-500">印刷所入稿用。用紙の外側にトンボを描画します。</p>    
+                                    </div>    
+                                </label>    
+                            </div>    
+                                
+                            <!-- CMYKトグル (Step 4用) -->    
+                            <div class="bg-yellow-50 p-3 rounded-lg border border-yellow-200">    
+                                <label class="flex items-center gap-3 cursor-pointer">    
+                                    <input type="checkbox" id="chk-cmyk-preview-out" onchange="app.toggleCMYK(this.checked)" class="w-5 h-5 text-yellow-600 rounded">    
+                                    <div>    
+                                        <span class="font-bold text-yellow-800 text-sm">CMYKシミュレーション</span>    
+                                        <p class="text-xs text-yellow-600">Japan Color 2001 Coated 近似色で出力</p>    
+                                        <!-- 変更点: 注意書きを追加 -->    
+                                        <div class="text-xs text-yellow-600 mt-2 space-y-1">    
+                                            <p>・CMYKでカラー印刷した際の色味イメージです。</p>    
+                                            <p>・実際の印刷物の見え方とは異なる場合があります。</p>    
+                                            <p>・実際の印刷物の色彩についての責任は負いかねます。</p>    
+                                        </div>    
+                                    </div>    
+                                </label>    
+                            </div>    
+                        </div>    
+    
+                        <!-- 変更点: 出力件数と用紙サイズを左寄せに変更 -->    
+                        <div class="border-t pt-4">    
+                            <div class="flex justify-start items-center gap-2 text-sm mb-2">    
+                                <span class="text-gray-600">出力件数:</span>    
+                                <div><span class="font-bold" id="total-records">0</span> 件</div>    
+                            </div>    
+                            <div class="flex justify-start items-center gap-2 text-sm mb-2">    
+                                <span class="text-gray-600">PDF用紙サイズ:</span>    
+                                <span class="font-bold" id="paper-size-display">-</span>    
+                            </div>    
+                        </div>    
+    
+                        <button onclick="app.generatePDF()" id="btn-generate" class="w-full py-4 text-white font-bold rounded-lg shadow-lg hover:opacity-90 transition flex items-center justify-center gap-2" style="background-color: var(--color-primary);">    
+                            <i data-lucide="download" class="w-5 h-5"></i> PDFを生成してダウンロード    
+                        </button>    
+                            
+                        <!-- Progress Bar -->    
+                        <div id="progress-container" class="hidden">    
+                            <div class="flex justify-between text-xs text-gray-500 mb-1">    
+                                <span>生成中...</span>    
+                                <span id="progress-text">0%</span>    
+                            </div>    
+                            <div class="w-full bg-gray-200 rounded-full h-2.5">    
+                                <div id="progress-bar" class="bg-blue-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>    
+                            </div>    
+                            <p class="text-xs text-red-500 mt-2">※処理中はブラウザを閉じないでください</p>    
+                        </div>    
+                    </div>    
+                </div>    
+    
+                <!-- プレビュー表示 -->    
+                <div class="flex flex-col items-center justify-center bg-gray-100 rounded-xl p-4 border border-gray-300">    
+                    <p class="text-gray-500 text-sm mb-4">プレビュー (1件目)</p>    
+                    <div id="preview-wrapper" class="flex items-center justify-center overflow-hidden w-full h-[400px] bg-gray-200 rounded border border-dashed border-gray-400">    
+                        <div id="preview-stage-container" class="shadow-2xl bg-white relative transition-all duration-300 origin-center">    
+                            <!-- JSでここに描画 -->    
+                        </div>    
+                    </div>    
+                </div>    
+            </div>    
+    
+            <div class="mt-8 text-center">    
+                 <button onclick="app.setStep(3)" class="px-6 py-2 border rounded hover:bg-gray-50 border-gray-300 text-gray-600 font-bold">戻る</button>    
+            </div>    
+        </div>    
+    
+    </main>    
+    
+    <!-- レンダリング用ステージ (非表示) -->    
+    <div id="render-stage"></div>    
+    
+    <script>    
+        const app = {    
+            state: {    
+                step: 1,    
+                template: null, // DataURL    
+                templateType: 'PNG', // 'PNG' or 'JPEG'    
+                templateRatio: 0.707, // Default A4 aspect ratio    
+                originalTemplateWidth: 0, // Pixels (naturalWidth)    
+                csv: { headers: [], rows: [] },    
+                config: { items: [] },    
+                activeItemId: null,    
+                isCMYK: false, // CMYK Mode    
+            },    
+    
+            // Paper Size Definitions (mm)    
+            PAPER_SIZES: {    
+                a3: { w: 297, h: 420 },    
+                a4: { w: 210, h: 297 },    
+                a5: { w: 148, h: 210 },    
+                b4: { w: 257, h: 364 },    
+                b5: { w: 182, h: 257 },    
+                letter: { w: 215.9, h: 279.4 },    
+                postcard: { w: 100, h: 148 }    
+            },    
+    
+            init() {    
+                lucide.createIcons();    
+                this.updateStepNav(1);    
+                    
+                // 離脱防止アラート    
+                window.addEventListener('beforeunload', (e) => {    
+                    if (this.state.config.items.length > 0 || this.state.template) {    
+                        e.preventDefault();    
+                        e.returnValue = '編集中のデータが失われますがよろしいですか？';    
+                    }    
+                });    
+            },    
+    
+            // --- CMYK Simulation Logic (Japan Color 2001 approximation) ---    
+            simulateCMYK(hex) {    
+                // 1. Hex to RGB    
+                let r = parseInt(hex.substring(1,3), 16);    
+                let g = parseInt(hex.substring(3,5), 16);    
+                let b = parseInt(hex.substring(5,7), 16);    
+    
+                // 2. RGB to CMYK (Standard Math)    
+                let c = 1 - (r / 255);    
+                let m = 1 - (g / 255);    
+                let y = 1 - (b / 255);    
+                let k = Math.min(c, Math.min(m, y));    
+                    
+                if (k < 1) {    
+                    c = (c - k) / (1 - k);    
+                    m = (m - k) / (1 - k);    
+                    y = (y - k) / (1 - k);    
+                } else {    
+                    c = 0; m = 0; y = 0;    
+                }    
+    
+                // 3. PROFILE SIMULATION (Japan Color 2001 Coated Approximation)    
+                // Impurity simulation: Real inks aren't pure.    
+                // Reduce saturation of CMY slightly, boost K impact.    
+                // Shift Blue/Green towards duller tones.    
+                    
+                // Dampen saturation (Simulation of narrower gamut)    
+                c = Math.min(1, c * 0.95);     
+                m = Math.min(1, m * 0.95);     
+                y = Math.min(1, y * 0.95);     
+                    
+                // 4. CMYK to RGB (Back conversion)    
+                // r = 255 * (1-c) * (1-k)    
+                let rNew = 255 * (1 - c) * (1 - k);    
+                let gNew = 255 * (1 - m) * (1 - k);    
+                let bNew = 255 * (1 - y) * (1 - k);    
+    
+                // 5. Paper Profile Adjustment (Brightness reduction for Coated paper)    
+                // Coated paper isn't 100% white light emissive like screens.    
+                rNew *= 0.92;    
+                gNew *= 0.92;    
+                bNew *= 0.92;    
+    
+                const toHex = (n) => {    
+                    const i = Math.max(0, Math.min(255, Math.round(n)));    
+                    return i.toString(16).padStart(2, '0');    
+                };    
+    
+                return `#${toHex(rNew)}${toHex(gNew)}${toHex(bNew)}`;    
+            },    
+    
+            toggleCMYK(checked) {    
+                this.state.isCMYK = checked;    
+                    
+                // Sync Checkboxes    
+                if(document.getElementById('chk-cmyk-preview-out')) {    
+                    document.getElementById('chk-cmyk-preview-out').checked = checked;    
+                }    
+    
+                // Re-render Views    
+                if (this.state.step === 4) this.updatePreviewSettings();    
+            },    
+    
+            // --- Navigation ---    
+            setStep(step) {    
+                if (step === 2 && !this.state.template) return alert("テンプレートをアップロードしてください");    
+                if (step === 3 && this.state.config.items.length === 0) return alert("要素を追加してください");    
+    
+                document.querySelectorAll('[id^="view-"]').forEach(el => el.classList.add('hidden'));    
+                    
+                if (step === 1) document.getElementById('view-template').classList.remove('hidden');    
+                if (step === 2) {    
+                    document.getElementById('view-data').classList.remove('hidden');    
+                    this.renderCsvSelector();    
+                    this.renderConfigList();    
+                }    
+                if (step === 3) {    
+                    document.getElementById('view-layout').classList.remove('hidden');    
+                    this.initLayoutEditor();    
+                }    
+                if (step === 4) {    
+                    document.getElementById('view-preview').classList.remove('hidden');    
+                    this.initPreview();    
+                }    
+    
+                this.state.step = step;    
+                this.updateStepNav(step);    
+                window.scrollTo(0,0);    
+            },    
+    
+            updateStepNav(current) {    
+                for(let i=1; i<=4; i++) {    
+                    const el = document.getElementById(`step-nav-${i}`);    
+                    if (!el) continue;    
+                    if (i === current) {    
+                        el.className = "px-3 py-1 rounded-full text-white font-bold transition-colors shadow-md";    
+                        el.style.backgroundColor = "var(--color-primary)";    
+                        el.style.borderColor = "var(--color-primary)";    
+                    } else if (i < current) {    
+                        el.className = "px-3 py-1 rounded-full bg-white text-gray-500 font-bold cursor-pointer transition-colors hover:bg-gray-100 border border-gray-300";    
+                        el.onclick = () => this.setStep(i);    
+                        el.style.backgroundColor = ""; el.style.borderColor = "";    
+                    } else {    
+                        el.className = "px-3 py-1 rounded-full bg-white text-gray-300 transition-colors border border-gray-200";    
+                        el.onclick = null;    
+                        el.style.backgroundColor = ""; el.style.borderColor = "";    
+                    }    
+                }    
+            },    
+    
+            // --- Step 1: Template ---    
+            async handleTemplateUpload(e) {    
+                const file = e.target.files[0];    
+                if (!file) return;    
+    
+                const filenameEl = document.getElementById('template-filename');    
+                const loadingEl = document.getElementById('loading-pdf');    
+                const nextBtn = document.getElementById('btn-next-step1');    
+                    
+                filenameEl.textContent = file.name;    
+                filenameEl.classList.remove('hidden');    
+                nextBtn.disabled = true;    
+                nextBtn.classList.add('bg-gray-300', 'cursor-not-allowed');    
+                nextBtn.style.backgroundColor = "";    
+    
+                // Set file type for export optimization    
+                if (file.type === 'image/jpeg') this.state.templateType = 'JPEG';    
+                else this.state.templateType = 'PNG'; // PDF or PNG    
+    
+                if (file.type === 'application/pdf') {    
+                    loadingEl.classList.remove('hidden');    
+                    try {    
+                        const arrayBuffer = await file.arrayBuffer();    
+                        const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;    
+                        const page = await pdf.getPage(1);    
+                        // Increase scale for PDF to ensure better quality when rasterized    
+                        const viewport = page.getViewport({ scale: 3 });    
+                        const canvas = document.createElement('canvas');    
+                        const ctx = canvas.getContext('2d');    
+                        canvas.width = viewport.width;    
+                        canvas.height = viewport.height;    
+                        await page.render({ canvasContext: ctx, viewport: viewport }).promise;    
+                        this.state.template = canvas.toDataURL('image/png');    
+                        this.state.templateRatio = viewport.width / viewport.height;    
+                        this.state.originalTemplateWidth = viewport.width;     
+                        loadingEl.classList.add('hidden');    
+                        this.enableNextButton(nextBtn);    
+                    } catch (err) {    
+                        alert("PDF読み込みエラー: " + err.message);    
+                        loadingEl.classList.add('hidden');    
+                    }    
+                } else {    
+                    const reader = new FileReader();    
+                    reader.onload = (ev) => {    
+                        const img = new Image();    
+                        img.onload = () => {    
+                            this.state.template = ev.target.result;    
+                            this.state.templateRatio = img.width / img.height;    
+                            this.state.originalTemplateWidth = img.width;    
+                            this.enableNextButton(nextBtn);    
+                        };    
+                        img.src = ev.target.result;    
+                    };    
+                    reader.readAsDataURL(file);    
+                }    
+            },    
+    
+            enableNextButton(btn) {    
+                btn.disabled = false;    
+                btn.classList.remove('bg-gray-300', 'cursor-not-allowed');    
+                btn.classList.add('bg-blue-600', 'hover:bg-blue-700');    
+                btn.style.backgroundColor = "var(--color-primary)";    
+            },    
+    
+            // --- Step 2: Data ---    
+            handleCsvUpload(e) {    
+                const file = e.target.files[0];    
+                if (!file) return;    
+                const reader = new FileReader();    
+                reader.onload = (ev) => {    
+                    const text = ev.target.result;    
+                    const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');    
+                    if (lines.length < 2) return alert('ヘッダー行が必要です');    
+    
+                    const parseLine = (line) => {    
+                        return line.split(',').map(s => s.trim().replace(/^"|"$/g, ''));    
+                    };    
+    
+                    const headers = parseLine(lines[0]);    
+                    const rows = lines.slice(1).map(line => parseLine(line));    
+    
+                    const csvStatusEl = document.getElementById('csv-status');    
+                    if (rows.length > 500) {    
+                         csvStatusEl.innerHTML = 'アップロード上限500件を超えています。<br>ファイルを修正してください。';    
+                         csvStatusEl.className = 'mt-4 text-sm font-bold text-red-600';    
+                         csvStatusEl.classList.remove('hidden');    
+                         document.getElementById('column-settings').classList.add('opacity-50', 'pointer-events-none');    
+                         document.getElementById('column-settings').classList.remove('opacity-100');    
+                         e.target.value = '';    
+                         return;    
+                    }    
+    
+                    this.state.csv = { headers, rows };    
+                    csvStatusEl.textContent = `読み込み完了: ${rows.length}件`;    
+                    csvStatusEl.className = 'mt-4 text-sm font-bold text-green-600'; // 正常時は緑    
+                    csvStatusEl.classList.remove('hidden');    
+                        
+                    document.getElementById('column-settings').classList.remove('opacity-50', 'pointer-events-none');    
+                    document.getElementById('column-settings').classList.add('opacity-100');    
+                        
+                    this.state.config.items = [];    
+                    this.renderCsvSelector();    
+                    this.renderConfigList();    
+                };    
+                reader.readAsText(file);    
+            },    
+    
+            renderCsvSelector() {    
+                const select = document.getElementById('select-csv-col');    
+                select.innerHTML = '<option value="">列を選択...</option>';    
+                this.state.csv.headers.forEach((h, i) => {    
+                    const opt = document.createElement('option');    
+                    opt.value = i; opt.textContent = h; select.appendChild(opt);    
+                });    
+            },    
+    
+            addItemConfig() {    
+                const colIdx = document.getElementById('select-csv-col').value;    
+                if (colIdx === "") return alert("列を選択してください");    
+                const type = document.getElementById('select-item-type').value;    
+                    
+                this.state.config.items.push({    
+                    id: `item-${Date.now()}`,    
+                    type: type,    
+                    colIdx: parseInt(colIdx),    
+                    label: this.state.csv.headers[colIdx],    
+                    x: 50, y: 50,    
+                    width: type === 'qr' ? 15 : null,    
+                    fontSize: 4,    
+                    color: '#000000',    
+                    fontFamily: 'sans-serif',    
+                    fontWeight: 'normal'    
+                });    
+                this.renderConfigList();    
+                this.updateNextButton();    
+            },    
+    
+            removeItemConfig(id) {    
+                this.state.config.items = this.state.config.items.filter(i => i.id !== id);    
+                this.renderConfigList();    
+                this.updateNextButton();    
+            },    
+    
+            renderConfigList() {    
+                const list = document.getElementById('config-items-list');    
+                list.innerHTML = '';    
+                if(this.state.config.items.length===0) {    
+                    list.innerHTML = '<li class="text-gray-400 text-xs text-center py-4">要素を追加してください</li>';    
+                    return;    
+                }    
+                this.state.config.items.forEach(item => {    
+                    const li = document.createElement('li');    
+                    li.className = "flex justify-between items-center bg-white border p-2 rounded shadow-sm text-sm";    
+                    li.innerHTML = `    
+                        <div class="flex items-center gap-2">    
+                            <i data-lucide="${item.type==='qr'?'qr-code':'type'}" class="w-4 h-4 text-gray-500"></i>    
+                            <span class="font-bold">${item.label}</span>    
+                        </div>    
+                        <button onclick="app.removeItemConfig('${item.id}')" class="text-red-400 p-1"><i data-lucide="trash-2" class="w-4 h-4"></i></button>    
+                    `;    
+                    list.appendChild(li);    
+                });    
+                lucide.createIcons();    
+            },    
+    
+            updateNextButton() {    
+                const btn = document.getElementById('btn-go-layout');    
+                if (this.state.config.items.length > 0) {    
+                    btn.disabled = false;    
+                    btn.classList.remove('bg-gray-300', 'cursor-not-allowed');    
+                    btn.classList.add('bg-blue-600', 'hover:bg-blue-700');    
+                    btn.style.backgroundColor = "var(--color-primary)";    
+                } else {    
+                    btn.disabled = true;    
+                    btn.classList.add('bg-gray-300', 'cursor-not-allowed');    
+                    btn.style.backgroundColor = "";    
+                }    
+            },    
+    
+            // --- Step 3: Layout (DOM Editor) ---    
+            initLayoutEditor() {    
+                const bg = document.getElementById('editor-bg');    
+                bg.src = this.state.template;    
+                    
+                // Remove CMYK filter in layout editor    
+                bg.classList.remove('cmyk-filter');    
+    
+                if(this.state.config.items.length > 0 && !this.state.activeItemId) {    
+                    this.state.activeItemId = this.state.config.items[0].id;    
+                }    
+                this.renderEditorItems();    
+            },    
+    
+            renderEditorItems() {    
+                const layer = document.getElementById('editor-elements-layer');    
+                layer.innerHTML = '';    
+                const sampleRow = this.state.csv.rows[0] || [];    
+    
+                this.state.config.items.forEach(item => {    
+                    const el = document.createElement('div');    
+                    el.className = `editor-item ${this.state.activeItemId === item.id ? 'active' : ''}`;    
+                    el.style.left = item.x + '%';    
+                    el.style.top = item.y + '%';    
+                    el.style.fontFamily = item.fontFamily;    
+                    el.onmousedown = (e) => this.handleMouseDown(e, item);    
+    
+                    if (item.type === 'qr') {    
+                        el.style.width = item.width + '%';    
+                        el.style.aspectRatio = '1/1';    
+                        const cvs = document.createElement('canvas');    
+                        cvs.style.width = '100%';    
+                            
+                        // No CMYK in layout editor    
+                        const qrColor = 'black';    
+                            
+                        new QRious({     
+                            element: cvs,     
+                            value: sampleRow[item.colIdx]||'sample',     
+                            size: 300,    
+                            foreground: qrColor     
+                        });    
+                        el.appendChild(cvs);    
+                        el.style.backgroundColor = 'white';    
+                        el.style.padding = '2%';    
+                    } else {    
+                        el.textContent = sampleRow[item.colIdx] || `{{${item.label}}}`;    
+                        el.style.fontSize = `max(12px, ${item.fontSize * 10}px)`;     
+                        // No CMYK in layout editor    
+                        el.style.color = item.color;    
+                        el.style.fontWeight = item.fontWeight;    
+                        el.style.whiteSpace = "nowrap";    
+                    }    
+    
+                    if (this.state.activeItemId === item.id) {    
+                        const handle = document.createElement('div');    
+                        handle.className = 'resize-handle';    
+                        el.appendChild(handle);    
+                    }    
+                    layer.appendChild(el);    
+                });    
+                this.renderPropertyPanel();    
+            },    
+    
+            handleMouseDown(e, item) {    
+                e.stopPropagation();    
+                if (e.target.classList.contains('resize-handle')) {    
+                    this.handleResizeStart(e, item);    
+                    return;    
+                }    
+                this.state.activeItemId = item.id;    
+                this.renderEditorItems();    
+    
+                const startX = e.clientX; const startY = e.clientY;    
+                const startItemX = item.x; const startItemY = item.y;    
+                const container = document.getElementById('editor-canvas').getBoundingClientRect();    
+    
+                const onMove = (mv) => {    
+                    const dx = mv.clientX - startX; const dy = mv.clientY - startY;    
+                    item.x = Math.max(0, Math.min(100, startItemX + (dx/container.width)*100));    
+                    item.y = Math.max(0, Math.min(100, startItemY + (dy/container.height)*100));    
+                    const el = document.querySelector('.editor-item.active');    
+                    if(el) { el.style.left=item.x+'%'; el.style.top=item.y+'%'; }    
+                };    
+                const onUp = () => {    
+                    window.removeEventListener('mousemove', onMove);    
+                    window.removeEventListener('mouseup', onUp);    
+                    this.renderPropertyPanel();    
+                };    
+                window.addEventListener('mousemove', onMove);    
+                window.addEventListener('mouseup', onUp);    
+            },    
+    
+            handleResizeStart(e, item) {    
+                e.stopPropagation();    
+                const startX = e.clientX;    
+                const startVal = item.type==='qr' ? item.width : item.fontSize;    
+                const container = document.getElementById('editor-canvas').getBoundingClientRect();    
+    
+                const onMove = (mv) => {    
+                    const dx = mv.clientX - startX;    
+                    if (item.type==='qr') {    
+                        item.width = Math.max(5, Math.min(50, startVal + (dx/container.width)*100));    
+                        const el = document.querySelector('.editor-item.active');    
+                        if(el) el.style.width = item.width+'%';    
+                    } else {    
+                        item.fontSize = Math.max(1, Math.min(20, startVal + (dx/10)));    
+                        const el = document.querySelector('.editor-item.active');    
+                        if(el) el.style.fontSize = `max(12px, ${item.fontSize*10}px)`;    
+                    }    
+                };    
+                const onUp = () => {    
+                    window.removeEventListener('mousemove', onMove);    
+                    window.removeEventListener('mouseup', onUp);    
+                    this.renderPropertyPanel();    
+                };    
+                window.addEventListener('mousemove', onMove);    
+                window.addEventListener('mouseup', onUp);    
+            },    
+    
+            renderPropertyPanel() {    
+                const panel = document.getElementById('property-panel-content');    
+                const item = this.state.config.items.find(i => i.id === this.state.activeItemId);    
+                if (!item) {    
+                    panel.innerHTML = '<p class="text-sm text-gray-400 text-center py-8">要素を選択してください</p>';    
+                    return;    
+                }    
+                let html = `<div class="space-y-4"><div class="text-xs text-gray-500 font-bold border-b pb-1 mb-2">選択中: ${item.label}</div>`;    
+                html += `<div><label class="text-xs text-gray-500">位置 (X, Y)</label><div class="flex gap-2"><input type="number" step="0.1" value="${item.x.toFixed(1)}" onchange="app.updateProp('${item.id}','x',this.value)" class="w-full border rounded p-1"><input type="number" step="0.1" value="${item.y.toFixed(1)}" onchange="app.updateProp('${item.id}','y',this.value)" class="w-full border rounded p-1"></div></div>`;    
+                    
+                if(item.type !== 'qr') {    
+                     html += `<div><label class="text-xs text-gray-500">フォントサイズ</label><input type="number" step="0.1" value="${item.fontSize.toFixed(1)}" onchange="app.updateProp('${item.id}','fontSize',this.value)" class="w-full border rounded p-1"></div>`;    
+                     html += `<div><label class="text-xs text-gray-500">色</label><div class="flex gap-2"><input type="color" value="${item.color}" onchange="app.updateProp('${item.id}','color',this.value)"><input type="text" value="${item.color}" class="w-full border rounded text-xs p-1"></div></div>`;    
+                     html += `<div><label class="text-xs text-gray-500">フォント</label><select onchange="app.updateProp('${item.id}','fontFamily',this.value)" class="w-full border rounded text-xs p-1"><option value="sans-serif" ${item.fontFamily === 'sans-serif' ? 'selected' : ''}>ゴシック</option><option value="serif" ${item.fontFamily === 'serif' ? 'selected' : ''}>明朝</option></select></div>`;    
+                     html += `<label class="flex items-center gap-2 mt-2"><input type="checkbox" ${item.fontWeight==='bold'?'checked':''} onchange="app.updateProp('${item.id}','fontWeight',this.checked?'bold':'normal')"><span class="text-sm">太字</span></label>`;    
+                } else {    
+                     html += `<div><label class="text-xs text-gray-500">サイズ (%)</label><input type="number" value="${item.width.toFixed(1)}" onchange="app.updateProp('${item.id}','width',this.value)" class="w-full border rounded p-1"></div>`;    
+                }    
+                    
+                html += `<div class="text-right pt-4 border-t"><button onclick="app.deleteActiveItem()" class="text-xs text-red-500 underline">削除</button></div></div>`;    
+                panel.innerHTML = html;    
+            },    
+    
+            updateProp(id, prop, val) {    
+                const item = this.state.config.items.find(i=>i.id===id);    
+                if(item) {    
+                    item[prop] = (['x','y','width','fontSize'].includes(prop)) ? parseFloat(val) : val;    
+                    this.renderEditorItems();    
+                }    
+            },    
+            deleteActiveItem() {    
+                 this.state.config.items = this.state.config.items.filter(i => i.id !== this.state.activeItemId);    
+                 this.state.activeItemId = null;    
+                 this.renderEditorItems();    
+            },    
+    
+            // --- Step 4: Preview & Generator ---    
+                
+            getOutputSettings() {    
+                const sizeKey = document.getElementById('opt-paper-size').value;    
+                const orientation = document.querySelector('input[name="opt-orientation"]:checked').value;    
+                const crop = document.getElementById('opt-cropmarks').checked;    
+                const bleed = false;     
+                // Add cmyk setting retrieval    
+                const cmyk = document.getElementById('chk-cmyk-preview-out') ? document.getElementById('chk-cmyk-preview-out').checked : false;    
+                    
+                let base = this.PAPER_SIZES[sizeKey] || this.PAPER_SIZES['a4'];    
+                let w = base.w;    
+                let h = base.h;    
+                    
+                if (orientation === 'landscape') {    
+                    [w, h] = [h, w];    
+                }    
+                    
+                return { w, h, orientation, crop, bleed, cmyk };    
+            },    
+    
+            initPreview() {    
+                document.getElementById('total-records').textContent = this.state.csv.rows.length;    
+                this.updatePreviewSettings();    
+            },    
+    
+            updatePreviewSettings() {    
+                const s = this.getOutputSettings();    
+                const display = document.getElementById('paper-size-display');    
+                    
+                let label = `${s.w} x ${s.h} mm`;    
+                if (s.crop) label += " (+トンボ余白)";    
+                    
+                display.textContent = label;    
+                this.renderSinglePagePreview(0, 'preview-stage-container', s);    
+            },    
+    
+            // Helper: Calculate containment dimensions    
+            getContainDimensions(containerW, containerH, contentRatio) {    
+                const containerRatio = containerW / containerH;    
+                let drawW, drawH, startX, startY;    
+    
+                if (containerRatio > contentRatio) {    
+                    drawH = containerH;    
+                    drawW = drawH * contentRatio;    
+                    startY = 0;    
+                    startX = (containerW - drawW) / 2;    
+                } else {    
+                    drawW = containerW;    
+                    drawH = drawW / contentRatio;    
+                    startX = 0;    
+                    startY = (containerH - drawH) / 2;    
+                }    
+                return { drawW, drawH, startX, startY };    
+            },    
+    
+            // Async function to wait for images    
+            async renderPageToDOM(container, rowIdx, settings, isExport = false, drawBackground = true) {    
+                container.innerHTML = '';    
+                const row = this.state.csv.rows[rowIdx];    
+                    
+                // Determine DPI    
+                // Preview: ~96 DPI (Standard Web)    
+                // Export: Min 300 DPI or Match Template Resolution (Whichever is higher)    
+                let dpi = 96;    
+                if (isExport) {    
+                    const baseDpi = 300; // Minimum print quality    
+                    const paperInchWidth = settings.w / 25.4;     
+                    const tmplDpi = (this.state.originalTemplateWidth > 0 && paperInchWidth > 0)     
+                        ? (this.state.originalTemplateWidth / paperInchWidth)     
+                        : 0;    
+                        
+                    dpi = Math.max(baseDpi, tmplDpi);    
+                }    
+    
+                const mmToPx = (mm) => Math.round(mm * (dpi / 25.4));    
+                    
+                const baseW_mm = settings.w;    
+                const baseH_mm = settings.h;    
+                const baseW_px = mmToPx(baseW_mm);    
+                const baseH_px = mmToPx(baseH_mm);    
+                    
+                container.style.width = baseW_px + 'px';    
+                container.style.height = baseH_px + 'px';    
+                container.style.position = 'relative';    
+                container.style.overflow = 'hidden';    
+                container.style.backgroundColor = drawBackground ? 'white' : 'transparent'; // Transparent if overlay    
+                    
+                // Create a canvas for the flattened image    
+                const canvas = document.createElement('canvas');    
+                canvas.width = baseW_px;    
+                canvas.height = baseH_px;    
+                const ctx = canvas.getContext('2d');    
+                    
+                // Fill background    
+                if (drawBackground) {    
+                    ctx.fillStyle = 'white';    
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);    
+                } else {    
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);    
+                }    
+    
+                // Calculate Dimensions (Contain Logic)    
+                const tmplRatio = this.state.templateRatio || 1;    
+                const { drawW, drawH, startX, startY } = this.getContainDimensions(baseW_px, baseH_px, tmplRatio);    
+    
+                // Draw Template Image ONLY if drawBackground is true    
+                if (drawBackground) {    
+                    const img = new Image();    
+                    img.crossOrigin = "Anonymous";    
+                    await new Promise((resolve) => {    
+                        img.onload = resolve;    
+                        img.onerror = resolve;    
+                        img.src = this.state.template;    
+                    });    
+                    ctx.imageSmoothingEnabled = true;    
+                    ctx.imageSmoothingQuality = isExport ? 'high' : 'medium';    
+                    ctx.drawImage(img, startX, startY, drawW, drawH);    
+                }    
+    
+                // Draw Items    
+                const baseScaleRef = drawW / 800;     
+    
+                for (const item of this.state.config.items) {    
+                    const itemLeft = startX + (item.x / 100) * drawW;    
+                    const itemTop = startY + (item.y / 100) * drawH;    
+    
+                    if (item.type === 'qr') {    
+                        const w = (item.width / 100) * drawW;    
+                        const qrCvs = document.createElement('canvas');    
+                            
+                        // Dynamically scale QR generation size to match render size    
+                        const qrGenSize = Math.max(500, w * 2);    
+    
+                        new QRious({     
+                            element: qrCvs,     
+                            value: row[item.colIdx]||'err',     
+                            size: qrGenSize,    
+                            foreground: 'black'     
+                        });    
+                            
+                        // Draw QR with white background and padding    
+                        const padding = w * 0.02; // 2% padding    
+                        ctx.fillStyle = 'white';    
+                        ctx.fillRect(itemLeft - w/2, itemTop - w/2, w, w);    
+                        ctx.drawImage(qrCvs, itemLeft - w/2 + padding, itemTop - w/2 + padding, w - padding*2, w - padding*2);    
+    
+                    } else {    
+                        const fSize = Math.max(8, item.fontSize * 10 * baseScaleRef);    
+                        ctx.font = `${item.fontWeight} ${fSize}px ${item.fontFamily}`;    
+                        ctx.fillStyle = item.color;    
+                        ctx.textAlign = 'center';    
+                        ctx.textBaseline = 'middle';    
+                        ctx.fillText(row[item.colIdx] || '', itemLeft, itemTop);    
+                    }    
+                }    
+    
+                // Apply CMYK Simulation (only if background drawing is enabled to affect whole image, OR just items if overlay)    
+                // If Overlay mode, this only affects items, which is fine.    
+                if (settings.cmyk) {    
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);    
+                    const data = imageData.data;    
+                        
+                    for (let i = 0; i < data.length; i += 4) {    
+                        // Skip transparent pixels in overlay mode    
+                        if (data[i+3] === 0) continue;    
+    
+                        const r = data[i];    
+                        const g = data[i + 1];    
+                        const b = data[i + 2];    
+                            
+                        const hex = "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);    
+                        const simHex = this.simulateCMYK(hex);    
+                            
+                        data[i] = parseInt(simHex.substring(1, 3), 16);    
+                        data[i + 1] = parseInt(simHex.substring(3, 5), 16);    
+                        data[i + 2] = parseInt(simHex.substring(5, 7), 16);    
+                    }    
+                    ctx.putImageData(imageData, 0, 0);    
+                }    
+    
+                // Convert canvas to image and append to container    
+                const finalImg = document.createElement('img');    
+                // Use PNG for overlay (transparency), JPEG for background    
+                const fmt = drawBackground ? 'image/jpeg' : 'image/png';    
+                finalImg.src = canvas.toDataURL(fmt, isExport ? 1.0 : 0.9);    
+                finalImg.style.width = '100%';    
+                finalImg.style.height = '100%';    
+                container.appendChild(finalImg);    
+            },    
+    
+            async renderSinglePagePreview(rowIdx, containerId, settings) {    
+                const container = document.getElementById(containerId);    
+                const wrapper = document.getElementById('preview-wrapper');    
+                    
+                const stage = document.createElement('div');    
+                // Preview uses normal mode (Combined Background + Items)    
+                await this.renderPageToDOM(stage, rowIdx, settings, false, true);    
+                    
+                const stageW = parseFloat(stage.style.width);     
+                const stageH = parseFloat(stage.style.height);     
+                    
+                const maxW = wrapper.clientWidth - 40;    
+                const maxH = wrapper.clientHeight - 40;    
+                    
+                const ratio = stageW / stageH;    
+                    
+                let boxW, boxH;    
+                if (maxW / maxH > ratio) {    
+                    boxH = maxH;    
+                    boxW = boxH * ratio;    
+                } else {    
+                    boxW = maxW;    
+                    boxH = boxW / ratio;    
+                }    
+                    
+                container.style.width = `${boxW}px`;    
+                container.style.height = `${boxH}px`;    
+                    
+                stage.style.width = '100%';    
+                stage.style.height = '100%';    
+                    
+                container.innerHTML = '';    
+                container.appendChild(stage);    
+            },    
               
-            <div class="flex items-center gap-2 text-sm font-medium hidden md:flex">  
-                <div id="step-nav-1" class="px-3 py-1 rounded-full bg-white border border-gray-200 text-gray-500">1. テンプレート</div>  
-                <span class="text-gray-300">→</span>  
-                <div id="step-nav-2" class="px-3 py-1 rounded-full bg-white border border-gray-200 text-gray-500">2. データ</div>  
-                <span class="text-gray-300">→</span>  
-                <div id="step-nav-3" class="px-3 py-1 rounded-full bg-white border border-gray-200 text-gray-500">3. レイアウト</div>  
-                <span class="text-gray-300">→</span>  
-                <div id="step-nav-4" class="px-3 py-1 rounded-full bg-white border border-gray-200 text-gray-500">4. 出力設定</div>  
-            </div>  
-        </div>  
-    </header>  
-  
-    <main class="max-w-6xl mx-auto p-6 pb-20">  
-  
-        <!-- STEP 1: テンプレート準備 -->  
-        <div id="view-template" class="fade-in">  
-            <div class="flex justify-center">  
-                <div class="w-full max-w-2xl bg-white p-8 rounded-xl shadow-lg border-2 border-dashed border-gray-300 flex flex-col items-center text-center transition hover:border-blue-400" id="drop-area-img">  
-                    <div class="mb-4 p-4 rounded-full bg-blue-50">  
-                        <i data-lucide="upload" class="text-blue-500 w-12 h-12"></i>  
-                    </div>  
-                    <h3 class="text-lg font-bold mb-2">テンプレート画像をアップロード</h3>  
-                    <p class="text-sm text-gray-500 mb-6">PDF / JPG / PNG</p>  
-                    <label class="cursor-pointer px-8 py-4 rounded-full text-white font-bold shadow-md transition transform hover:scale-105" style="background-color: var(--color-primary);">  
-                        ファイルを選択  
-                        <input type="file" accept="application/pdf, image/jpeg, image/png" class="hidden" onchange="app.handleTemplateUpload(event)">  
-                    </label>  
-                    <p id="template-filename" class="mt-4 text-sm font-bold text-gray-700 hidden"></p>  
-                    <div id="loading-pdf" class="hidden mt-2 text-blue-600 text-sm font-bold animate-pulse">PDFを変換中...</div>  
-                    <div class="mt-8 w-full flex justify-center">  
-                        <button id="btn-next-step1" disabled onclick="app.setStep(2)" class="px-12 py-3 rounded-lg bg-gray-300 text-white font-bold cursor-not-allowed transition-colors">次に進む</button>  
-                    </div>  
-                </div>  
-            </div>  
-        </div>  
-  
-        <!-- STEP 2: データ定義 -->  
-        <div id="view-data" class="hidden fade-in">  
-            <h2 class="text-2xl font-bold mb-6 text-center" style="color: var(--color-primary);">差し込みデータの準備</h2>  
-            <div class="grid md:grid-cols-2 gap-8">  
-                <div class="bg-white p-8 rounded-xl shadow-lg flex flex-col items-center text-center">  
-                    <i data-lucide="table" class="text-gray-400 w-10 h-10 mb-4"></i>  
-                    <h3 class="text-lg font-bold mb-4">差し込みデータのアップロード</h3>  
-                    <div class="text-sm text-gray-500 mb-4 text-left inline-block">  
-                        <p class="mb-1">・各差し込み要素毎に列を作成してください。</p>  
-                        <p class="mb-1">・各列の1行目には要素名を入れてください。<br><span class="text-xs text-gray-400 ml-4">例) URL, 氏名, 株主番号, etc...</span></p>  
-                        <p>・CSVファイルのみアップロード可能です。</p>  
-                    </div>  
-                    <label class="cursor-pointer px-6 py-2 rounded-full border border-gray-300 font-bold hover:bg-gray-50 transition">  
-                        CSVファイルを選択  
-                        <input type="file" accept=".csv,text/csv" class="hidden" onchange="app.handleCsvUpload(event)">  
-                    </label>  
-                    <p id="csv-status" class="mt-4 text-sm font-bold text-green-600 hidden"></p>  
-                </div>  
-  
-                <div id="column-settings" class="bg-white p-6 rounded-xl shadow-lg opacity-50 pointer-events-none transition-opacity">  
-                    <h3 class="text-lg font-bold mb-4 border-b pb-2">差し込み要素のマッピング</h3>  
-                    <div class="flex gap-2 mb-4">  
-                        <select id="select-csv-col" class="flex-1 p-2 border rounded bg-gray-50 text-sm"><option value="">列を選択...</option></select>  
-                        <select id="select-item-type" class="w-32 p-2 border rounded bg-gray-50 text-sm">  
-                            <option value="text">テキスト</option>  
-                            <option value="qr">QRコード</option>  
-                        </select>  
-                        <button onclick="app.addItemConfig()" class="text-white px-4 py-2 rounded text-sm font-bold hover:opacity-90 transition" style="background-color: var(--color-primary);">追加</button>  
-                    </div>  
-                    <div class="bg-gray-50 rounded border p-2 min-h-[150px] max-h-[300px] overflow-y-auto">  
-                        <ul id="config-items-list" class="space-y-2">  
-                            <li class="text-gray-400 text-xs text-center py-4">要素を追加してください</li>  
-                        </ul>  
-                    </div>  
-                </div>  
-            </div>  
-            <div class="mt-8 flex justify-center gap-4">  
-                <button onclick="app.setStep(1)" class="px-6 py-3 rounded-lg text-gray-500 hover:bg-gray-100 bg-white border border-gray-300">戻る</button>  
-                <button id="btn-go-layout" disabled onclick="app.setStep(3)" class="px-8 py-3 rounded-lg bg-gray-300 text-white font-bold cursor-not-allowed transition-colors">次に進む</button>  
-            </div>  
-        </div>  
-  
-        <!-- STEP 3: レイアウト編集 -->  
-        <div id="view-layout" class="hidden fade-in">  
-            <div class="flex flex-col lg:flex-row gap-6 h-[80vh]">  
-                <!-- キャンバス -->  
-                <div class="flex-1 bg-gray-200 rounded-xl overflow-auto flex justify-center items-center relative p-8">  
-                    <div id="editor-canvas" class="relative bg-white shadow-2xl transition-transform origin-center">  
-                        <img id="editor-bg" src="" class="block pointer-events-none select-none max-w-full" style="max-height: 70vh;">  
-                        <div id="editor-elements-layer" class="absolute inset-0"></div>  
-                    </div>  
-                </div>  
-  
-                <!-- プロパティパネル -->  
-                <div class="w-full lg:w-80 bg-white p-6 rounded-xl shadow-lg flex flex-col overflow-y-auto">  
-                    <h3 class="text-lg font-bold mb-4 border-b pb-2 flex items-center gap-2">  
-                        <i data-lucide="settings-2" class="w-5 h-5"></i> 要素の設定  
-                    </h3>  
-                    <div id="property-panel-content">  
-                        <p class="text-sm text-gray-400 text-center py-8">要素を選択すると詳細設定が表示されます</p>  
-                    </div>  
-                      
-                    <div class="mt-auto pt-6 border-t flex flex-col gap-3">  
-                        <button onclick="app.setStep(4)" class="w-full py-3 rounded-lg text-white font-bold shadow hover:opacity-90 transition" style="background-color: var(--color-primary);">次に進む (出力)</button>  
-                        <button onclick="app.setStep(2)" class="w-full py-2 text-sm text-gray-600 hover:bg-gray-50 rounded border border-gray-300">戻る</button>  
-                    </div>  
-                </div>  
-            </div>  
-        </div>  
-  
-        <!-- STEP 4: 出力設定 -->  
-        <div id="view-preview" class="hidden fade-in">  
-            <h2 class="text-2xl font-bold mb-6 text-center" style="color: var(--color-primary);">PDF出力設定</h2>  
-  
-            <div class="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">  
-                <!-- 設定パネル -->  
-                <div class="bg-white p-8 rounded-xl shadow-lg">  
-                    <h3 class="text-lg font-bold mb-4 flex items-center gap-2">  
-                        <i data-lucide="printer" class="w-5 h-5 text-blue-600"></i> 出力オプション  
-                    </h3>  
-  
-                    <div class="space-y-6">  
-                        <!-- 用紙設定グループ -->  
-                        <div class="space-y-4 border-b pb-4">  
-                            <div>  
-                                <label class="block text-sm font-bold text-gray-700 mb-1">用紙サイズ</label>  
-                                <select id="opt-paper-size" onchange="app.updatePreviewSettings()" class="w-full p-2 border rounded bg-gray-50">  
-                                    <optgroup label="A判 (ISO/JIS)">  
-                                        <option value="a3">A3 (297 x 420 mm)</option>  
-                                        <option value="a4" selected>A4 (210 x 297 mm)</option>  
-                                        <option value="a5">A5 (148 x 210 mm)</option>  
-                                    </optgroup>  
-                                    <optgroup label="B判 (JIS)">  
-                                        <option value="b4">B4 (257 x 364 mm)</option>  
-                                        <option value="b5">B5 (182 x 257 mm)</option>  
-                                    </optgroup>  
-                                    <optgroup label="その他">  
-                                        <option value="letter">Letter</option>  
-                                        <option value="postcard">はがき</option>  
-                                    </optgroup>  
-                                </select>  
-                            </div>  
-                              
-                            <div>  
-                                <label class="block text-sm font-bold text-gray-700 mb-2">用紙の向き</label>  
-                                <div class="flex gap-4">  
-                                    <label class="flex items-center gap-2 cursor-pointer bg-gray-50 px-4 py-2 rounded hover:bg-gray-100 border">  
-                                        <input type="radio" name="opt-orientation" value="portrait" checked onchange="app.updatePreviewSettings()" class="text-blue-600">  
-                                        <span>縦 (Portrait)</span>  
-                                    </label>  
-                                    <label class="flex items-center gap-2 cursor-pointer bg-gray-50 px-4 py-2 rounded hover:bg-gray-100 border">  
-                                        <input type="radio" name="opt-orientation" value="landscape" onchange="app.updatePreviewSettings()" class="text-blue-600">  
-                                        <span>横 (Landscape)</span>  
-                                    </label>  
-                                </div>  
-                            </div>  
-                        </div>  
-  
-                        <!-- トンボ・塗り足しグループ -->  
-                        <div class="space-y-4">  
-                            <div class="bg-blue-50 p-3 rounded-lg border border-blue-100">  
-                                <label class="flex items-center gap-3 cursor-pointer">  
-                                    <input type="checkbox" id="opt-cropmarks" class="w-5 h-5 text-blue-600 rounded" onchange="app.updatePreviewSettings()">  
-                                    <div>  
-                                        <span class="font-bold text-gray-800 text-sm">トンボ（トリムマーク）を付ける</span>  
-                                        <p class="text-xs text-gray-500">印刷所入稿用。用紙の外側にトンボを描画します。</p>  
-                                    </div>  
-                                </label>  
-                            </div>  
-                              
-                            <!-- CMYKトグル (Step 4用) -->  
-                            <div class="bg-yellow-50 p-3 rounded-lg border border-yellow-200">  
-                                <label class="flex items-center gap-3 cursor-pointer">  
-                                    <input type="checkbox" id="chk-cmyk-preview-out" onchange="app.toggleCMYK(this.checked)" class="w-5 h-5 text-yellow-600 rounded">  
-                                    <div>  
-                                        <span class="font-bold text-yellow-800 text-sm">CMYKシミュレーション</span>  
-                                        <p class="text-xs text-yellow-600">Japan Color 2001 Coated 近似色で出力</p>  
-                                    </div>  
-                                </label>  
-                            </div>  
-                        </div>  
-  
-                        <div class="border-t pt-4">  
-                            <div class="flex justify-between text-sm mb-2">  
-                                <span class="text-gray-600">出力件数:</span>  
-                                <span class="font-bold" id="total-records">0</span> 件  
-                            </div>  
-                            <div class="flex justify-between text-sm mb-2">  
-                                <span class="text-gray-600">PDF用紙サイズ:</span>  
-                                <span class="font-bold" id="paper-size-display">-</span>  
-                            </div>  
-                        </div>  
-  
-                        <button onclick="app.generatePDF()" id="btn-generate" class="w-full py-4 text-white font-bold rounded-lg shadow-lg hover:opacity-90 transition flex items-center justify-center gap-2" style="background-color: var(--color-primary);">  
-                            <i data-lucide="download" class="w-5 h-5"></i> PDFを生成してダウンロード  
-                        </button>  
-                          
-                        <!-- Progress Bar -->  
-                        <div id="progress-container" class="hidden">  
-                            <div class="flex justify-between text-xs text-gray-500 mb-1">  
-                                <span>生成中...</span>  
-                                <span id="progress-text">0%</span>  
-                            </div>  
-                            <div class="w-full bg-gray-200 rounded-full h-2.5">  
-                                <div id="progress-bar" class="bg-blue-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>  
-                            </div>  
-                            <p class="text-xs text-red-500 mt-2">※処理中はブラウザを閉じないでください</p>  
-                        </div>  
-                    </div>  
-                </div>  
-  
-                <!-- プレビュー表示 -->  
-                <div class="flex flex-col items-center justify-center bg-gray-100 rounded-xl p-4 border border-gray-300">  
-                    <p class="text-gray-500 text-sm mb-4">プレビュー (1件目)</p>  
-                    <div id="preview-wrapper" class="flex items-center justify-center overflow-hidden w-full h-[400px] bg-gray-200 rounded border border-dashed border-gray-400">  
-                        <div id="preview-stage-container" class="shadow-2xl bg-white relative transition-all duration-300 origin-center">  
-                            <!-- JSでここに描画 -->  
-                        </div>  
-                    </div>  
-                </div>  
-            </div>  
-  
-            <div class="mt-8 text-center">  
-                 <button onclick="app.setStep(3)" class="px-6 py-2 border rounded hover:bg-gray-50 border-gray-300 text-gray-600 font-bold">戻る</button>  
-            </div>  
-        </div>  
-  
-    </main>  
-  
-    <!-- レンダリング用ステージ (非表示) -->  
-    <div id="render-stage"></div>  
-  
-    <script>  
-        const app = {  
-            state: {  
-                step: 1,  
-                template: null, // DataURL  
-                templateRatio: 0.707, // Default A4 aspect ratio  
-                originalTemplateWidth: 0, // Pixels (naturalWidth)  
-                csv: { headers: [], rows: [] },  
-                config: { items: [] },  
-                activeItemId: null,  
-                isCMYK: false, // CMYK Mode  
-            },  
-  
-            // Paper Size Definitions (mm)  
-            PAPER_SIZES: {  
-                a3: { w: 297, h: 420 },  
-                a4: { w: 210, h: 297 },  
-                a5: { w: 148, h: 210 },  
-                b4: { w: 257, h: 364 },  
-                b5: { w: 182, h: 257 },  
-                letter: { w: 215.9, h: 279.4 },  
-                postcard: { w: 100, h: 148 }  
-            },  
-  
-            init() {  
-                lucide.createIcons();  
-                this.updateStepNav(1);  
-                  
-                // 離脱防止アラート  
-                window.addEventListener('beforeunload', (e) => {  
-                    if (this.state.config.items.length > 0 || this.state.template) {  
-                        e.preventDefault();  
-                        e.returnValue = '編集中のデータが失われますがよろしいですか？';  
-                    }  
-                });  
-            },  
-  
-            // --- CMYK Simulation Logic (Japan Color 2001 approximation) ---  
-            simulateCMYK(hex) {  
-                // 1. Hex to RGB  
-                let r = parseInt(hex.substring(1,3), 16);  
-                let g = parseInt(hex.substring(3,5), 16);  
-                let b = parseInt(hex.substring(5,7), 16);  
-  
-                // 2. RGB to CMYK (Standard Math)  
-                let c = 1 - (r / 255);  
-                let m = 1 - (g / 255);  
-                let y = 1 - (b / 255);  
-                let k = Math.min(c, Math.min(m, y));  
-                  
-                if (k < 1) {  
-                    c = (c - k) / (1 - k);  
-                    m = (m - k) / (1 - k);  
-                    y = (y - k) / (1 - k);  
-                } else {  
-                    c = 0; m = 0; y = 0;  
-                }  
-  
-                // 3. PROFILE SIMULATION (Japan Color 2001 Coated Approximation)  
-                // Impurity simulation: Real inks aren't pure.  
-                // Reduce saturation of CMY slightly, boost K impact.  
-                // Shift Blue/Green towards duller tones.  
-                  
-                // Dampen saturation (Simulation of narrower gamut)  
-                c = Math.min(1, c * 0.95);   
-                m = Math.min(1, m * 0.95);   
-                y = Math.min(1, y * 0.95);   
-                  
-                // 4. CMYK to RGB (Back conversion)  
-                // r = 255 * (1-c) * (1-k)  
-                let rNew = 255 * (1 - c) * (1 - k);  
-                let gNew = 255 * (1 - m) * (1 - k);  
-                let bNew = 255 * (1 - y) * (1 - k);  
-  
-                // 5. Paper Profile Adjustment (Brightness reduction for Coated paper)  
-                // Coated paper isn't 100% white light emissive like screens.  
-                rNew *= 0.92;  
-                gNew *= 0.92;  
-                bNew *= 0.92;  
-  
-                const toHex = (n) => {  
-                    const i = Math.max(0, Math.min(255, Math.round(n)));  
-                    return i.toString(16).padStart(2, '0');  
-                };  
-  
-                return `#${toHex(rNew)}${toHex(gNew)}${toHex(bNew)}`;  
-            },  
-  
-            toggleCMYK(checked) {  
-                this.state.isCMYK = checked;  
-                  
-                // Sync Checkboxes  
-                if(document.getElementById('chk-cmyk-preview-out')) {  
-                    document.getElementById('chk-cmyk-preview-out').checked = checked;  
-                }  
-  
-                // Re-render Views  
-                if (this.state.step === 4) this.updatePreviewSettings();  
-            },  
-  
-            // --- Navigation ---  
-            setStep(step) {  
-                if (step === 2 && !this.state.template) return alert("テンプレートをアップロードしてください");  
-                if (step === 3 && this.state.config.items.length === 0) return alert("要素を追加してください");  
-  
-                document.querySelectorAll('[id^="view-"]').forEach(el => el.classList.add('hidden'));  
-                  
-                if (step === 1) document.getElementById('view-template').classList.remove('hidden');  
-                if (step === 2) {  
-                    document.getElementById('view-data').classList.remove('hidden');  
-                    this.renderCsvSelector();  
-                    this.renderConfigList();  
-                }  
-                if (step === 3) {  
-                    document.getElementById('view-layout').classList.remove('hidden');  
-                    this.initLayoutEditor();  
-                }  
-                if (step === 4) {  
-                    document.getElementById('view-preview').classList.remove('hidden');  
-                    this.initPreview();  
-                }  
-  
-                this.state.step = step;  
-                this.updateStepNav(step);  
-                window.scrollTo(0,0);  
-            },  
-  
-            updateStepNav(current) {  
-                for(let i=1; i<=4; i++) {  
-                    const el = document.getElementById(`step-nav-${i}`);  
-                    if (!el) continue;  
-                    if (i === current) {  
-                        el.className = "px-3 py-1 rounded-full text-white font-bold transition-colors shadow-md";  
-                        el.style.backgroundColor = "var(--color-primary)";  
-                        el.style.borderColor = "var(--color-primary)";  
-                    } else if (i < current) {  
-                        el.className = "px-3 py-1 rounded-full bg-white text-gray-500 font-bold cursor-pointer transition-colors hover:bg-gray-100 border border-gray-300";  
-                        el.onclick = () => this.setStep(i);  
-                        el.style.backgroundColor = ""; el.style.borderColor = "";  
-                    } else {  
-                        el.className = "px-3 py-1 rounded-full bg-white text-gray-300 transition-colors border border-gray-200";  
-                        el.onclick = null;  
-                        el.style.backgroundColor = ""; el.style.borderColor = "";  
-                    }  
-                }  
-            },  
-  
-            // --- Step 1: Template ---  
-            async handleTemplateUpload(e) {  
-                const file = e.target.files[0];  
-                if (!file) return;  
-  
-                const filenameEl = document.getElementById('template-filename');  
-                const loadingEl = document.getElementById('loading-pdf');  
-                const nextBtn = document.getElementById('btn-next-step1');  
-                  
-                filenameEl.textContent = file.name;  
-                filenameEl.classList.remove('hidden');  
-                nextBtn.disabled = true;  
-                nextBtn.classList.add('bg-gray-300', 'cursor-not-allowed');  
-                nextBtn.style.backgroundColor = "";  
-  
-                if (file.type === 'application/pdf') {  
-                    loadingEl.classList.remove('hidden');  
-                    try {  
-                        const arrayBuffer = await file.arrayBuffer();  
-                        const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;  
-                        const page = await pdf.getPage(1);  
-                        const viewport = page.getViewport({ scale: 2 });  
-                        const canvas = document.createElement('canvas');  
-                        const ctx = canvas.getContext('2d');  
-                        canvas.width = viewport.width;  
-                        canvas.height = viewport.height;  
-                        await page.render({ canvasContext: ctx, viewport: viewport }).promise;  
-                        this.state.template = canvas.toDataURL('image/png');  
-                        this.state.templateRatio = viewport.width / viewport.height;  
-                        this.state.originalTemplateWidth = viewport.width; // Store original width  
-                        loadingEl.classList.add('hidden');  
-                        this.enableNextButton(nextBtn);  
-                    } catch (err) {  
-                        alert("PDF読み込みエラー: " + err.message);  
-                        loadingEl.classList.add('hidden');  
-                    }  
-                } else {  
-                    const reader = new FileReader();  
-                    reader.onload = (ev) => {  
-                        const img = new Image();  
-                        img.onload = () => {  
-                            this.state.template = ev.target.result;  
-                            this.state.templateRatio = img.width / img.height;  
-                            this.state.originalTemplateWidth = img.width; // Store  
-                            this.enableNextButton(nextBtn);  
-                        };  
-                        img.src = ev.target.result;  
-                    };  
-                    reader.readAsDataURL(file);  
-                }  
-            },  
-  
-            enableNextButton(btn) {  
-                btn.disabled = false;  
-                btn.classList.remove('bg-gray-300', 'cursor-not-allowed');  
-                btn.classList.add('bg-blue-600', 'hover:bg-blue-700');  
-                btn.style.backgroundColor = "var(--color-primary)";  
-            },  
-  
-            // --- Step 2: Data ---  
-            handleCsvUpload(e) {  
-                const file = e.target.files[0];  
-                if (!file) return;  
-                const reader = new FileReader();  
-                reader.onload = (ev) => {  
-                    const text = ev.target.result;  
-                    const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');  
-                    if (lines.length < 2) return alert('ヘッダー行が必要です');  
-  
-                    const parseLine = (line) => {  
-                        return line.split(',').map(s => s.trim().replace(/^"|"$/g, ''));  
-                    };  
-  
-                    const headers = parseLine(lines[0]);  
-                    const rows = lines.slice(1).map(line => parseLine(line));  
-  
-                    // 変更点: 行数チェック（ヘッダー行を含めて502行以上、つまりデータ行が501行以上の場合はエラー）  
-                    // データ行は lines.slice(1) なので rows.length でチェック  
-                    const csvStatusEl = document.getElementById('csv-status');  
-                    if (rows.length > 500) {  
-                         // エラー表示（赤文字）  
-                         csvStatusEl.innerHTML = 'アップロード上限500件を超えています。<br>ファイルを修正してください。';  
-                         csvStatusEl.className = 'mt-4 text-sm font-bold text-red-600';  
-                         csvStatusEl.classList.remove('hidden');  
-                           
-                         // マッピングエリアを無効化  
-                         document.getElementById('column-settings').classList.add('opacity-50', 'pointer-events-none');  
-                         document.getElementById('column-settings').classList.remove('opacity-100');  
-                           
-                         // 入力をリセットして処理中断  
-                         e.target.value = '';  
-                         return;  
-                    }  
-  
-                    this.state.csv = { headers, rows };  
-                    csvStatusEl.textContent = `読み込み完了: ${rows.length}件`;  
-                    csvStatusEl.className = 'mt-4 text-sm font-bold text-green-600'; // 正常時は緑  
-                    csvStatusEl.classList.remove('hidden');  
-                      
-                    document.getElementById('column-settings').classList.remove('opacity-50', 'pointer-events-none');  
-                    document.getElementById('column-settings').classList.add('opacity-100');  
-                      
-                    this.state.config.items = [];  
-                    this.renderCsvSelector();  
-                    this.renderConfigList();  
-                };  
-                reader.readAsText(file);  
-            },  
-  
-            renderCsvSelector() {  
-                const select = document.getElementById('select-csv-col');  
-                select.innerHTML = '<option value="">列を選択...</option>';  
-                this.state.csv.headers.forEach((h, i) => {  
-                    const opt = document.createElement('option');  
-                    opt.value = i; opt.textContent = h; select.appendChild(opt);  
-                });  
-            },  
-  
-            addItemConfig() {  
-                const colIdx = document.getElementById('select-csv-col').value;  
-                if (colIdx === "") return alert("列を選択してください");  
-                const type = document.getElementById('select-item-type').value;  
-                  
-                this.state.config.items.push({  
-                    id: `item-${Date.now()}`,  
-                    type: type,  
-                    colIdx: parseInt(colIdx),  
-                    label: this.state.csv.headers[colIdx],  
-                    x: 50, y: 50,  
-                    width: type === 'qr' ? 15 : null,  
-                    fontSize: 4,  
-                    color: '#000000',  
-                    fontFamily: 'sans-serif',  
-                    fontWeight: 'normal'  
-                });  
-                this.renderConfigList();  
-                this.updateNextButton();  
-            },  
-  
-            removeItemConfig(id) {  
-                this.state.config.items = this.state.config.items.filter(i => i.id !== id);  
-                this.renderConfigList();  
-                this.updateNextButton();  
-            },  
-  
-            renderConfigList() {  
-                const list = document.getElementById('config-items-list');  
-                list.innerHTML = '';  
-                if(this.state.config.items.length===0) {  
-                    list.innerHTML = '<li class="text-gray-400 text-xs text-center py-4">要素を追加してください</li>';  
-                    return;  
-                }  
-                this.state.config.items.forEach(item => {  
-                    const li = document.createElement('li');  
-                    li.className = "flex justify-between items-center bg-white border p-2 rounded shadow-sm text-sm";  
-                    li.innerHTML = `  
-                        <div class="flex items-center gap-2">  
-                            <i data-lucide="${item.type==='qr'?'qr-code':'type'}" class="w-4 h-4 text-gray-500"></i>  
-                            <span class="font-bold">${item.label}</span>  
-                        </div>  
-                        <button onclick="app.removeItemConfig('${item.id}')" class="text-red-400 p-1"><i data-lucide="trash-2" class="w-4 h-4"></i></button>  
-                    `;  
-                    list.appendChild(li);  
-                });  
-                lucide.createIcons();  
-            },  
-  
-            updateNextButton() {  
-                const btn = document.getElementById('btn-go-layout');  
-                if (this.state.config.items.length > 0) {  
-                    btn.disabled = false;  
-                    btn.classList.remove('bg-gray-300', 'cursor-not-allowed');  
-                    btn.classList.add('bg-blue-600', 'hover:bg-blue-700');  
-                    btn.style.backgroundColor = "var(--color-primary)";  
-                } else {  
-                    btn.disabled = true;  
-                    btn.classList.add('bg-gray-300', 'cursor-not-allowed');  
-                    btn.style.backgroundColor = "";  
-                }  
-            },  
-  
-            // --- Step 3: Layout (DOM Editor) ---  
-            initLayoutEditor() {  
-                const bg = document.getElementById('editor-bg');  
-                bg.src = this.state.template;  
-                  
-                // Remove CMYK filter in layout editor  
-                bg.classList.remove('cmyk-filter');  
-  
-                if(this.state.config.items.length > 0 && !this.state.activeItemId) {  
-                    this.state.activeItemId = this.state.config.items[0].id;  
-                }  
-                this.renderEditorItems();  
-            },  
-  
-            renderEditorItems() {  
-                const layer = document.getElementById('editor-elements-layer');  
-                layer.innerHTML = '';  
-                const sampleRow = this.state.csv.rows[0] || [];  
-  
-                this.state.config.items.forEach(item => {  
-                    const el = document.createElement('div');  
-                    el.className = `editor-item ${this.state.activeItemId === item.id ? 'active' : ''}`;  
-                    el.style.left = item.x + '%';  
-                    el.style.top = item.y + '%';  
-                    el.style.fontFamily = item.fontFamily;  
-                    el.onmousedown = (e) => this.handleMouseDown(e, item);  
-  
-                    if (item.type === 'qr') {  
-                        el.style.width = item.width + '%';  
-                        el.style.aspectRatio = '1/1';  
-                        const cvs = document.createElement('canvas');  
-                        cvs.style.width = '100%';  
-                          
-                        // No CMYK in layout editor  
-                        const qrColor = 'black';  
-                          
-                        new QRious({   
-                            element: cvs,   
-                            value: sampleRow[item.colIdx]||'sample',   
-                            size: 300,  
-                            foreground: qrColor   
-                        });  
-                        el.appendChild(cvs);  
-                        el.style.backgroundColor = 'white';  
-                        el.style.padding = '2%';  
-                    } else {  
-                        el.textContent = sampleRow[item.colIdx] || `{{${item.label}}}`;  
-                        el.style.fontSize = `max(12px, ${item.fontSize * 10}px)`;   
-                        // No CMYK in layout editor  
-                        el.style.color = item.color;  
-                        el.style.fontWeight = item.fontWeight;  
-                        el.style.whiteSpace = "nowrap";  
-                    }  
-  
-                    if (this.state.activeItemId === item.id) {  
-                        const handle = document.createElement('div');  
-                        handle.className = 'resize-handle';  
-                        el.appendChild(handle);  
-                    }  
-                    layer.appendChild(el);  
-                });  
-                this.renderPropertyPanel();  
-            },  
-  
-            handleMouseDown(e, item) {  
-                e.stopPropagation();  
-                if (e.target.classList.contains('resize-handle')) {  
-                    this.handleResizeStart(e, item);  
-                    return;  
-                }  
-                this.state.activeItemId = item.id;  
-                this.renderEditorItems();  
-  
-                const startX = e.clientX; const startY = e.clientY;  
-                const startItemX = item.x; const startItemY = item.y;  
-                const container = document.getElementById('editor-canvas').getBoundingClientRect();  
-  
-                const onMove = (mv) => {  
-                    const dx = mv.clientX - startX; const dy = mv.clientY - startY;  
-                    item.x = Math.max(0, Math.min(100, startItemX + (dx/container.width)*100));  
-                    item.y = Math.max(0, Math.min(100, startItemY + (dy/container.height)*100));  
-                    const el = document.querySelector('.editor-item.active');  
-                    if(el) { el.style.left=item.x+'%'; el.style.top=item.y+'%'; }  
-                };  
-                const onUp = () => {  
-                    window.removeEventListener('mousemove', onMove);  
-                    window.removeEventListener('mouseup', onUp);  
-                    this.renderPropertyPanel();  
-                };  
-                window.addEventListener('mousemove', onMove);  
-                window.addEventListener('mouseup', onUp);  
-            },  
-  
-            handleResizeStart(e, item) {  
-                e.stopPropagation();  
-                const startX = e.clientX;  
-                const startVal = item.type==='qr' ? item.width : item.fontSize;  
-                const container = document.getElementById('editor-canvas').getBoundingClientRect();  
-  
-                const onMove = (mv) => {  
-                    const dx = mv.clientX - startX;  
-                    if (item.type==='qr') {  
-                        item.width = Math.max(5, Math.min(50, startVal + (dx/container.width)*100));  
-                        const el = document.querySelector('.editor-item.active');  
-                        if(el) el.style.width = item.width+'%';  
-                    } else {  
-                        item.fontSize = Math.max(1, Math.min(20, startVal + (dx/10)));  
-                        const el = document.querySelector('.editor-item.active');  
-                        if(el) el.style.fontSize = `max(12px, ${item.fontSize*10}px)`;  
-                    }  
-                };  
-                const onUp = () => {  
-                    window.removeEventListener('mousemove', onMove);  
-                    window.removeEventListener('mouseup', onUp);  
-                    this.renderPropertyPanel();  
-                };  
-                window.addEventListener('mousemove', onMove);  
-                window.addEventListener('mouseup', onUp);  
-            },  
-  
-            renderPropertyPanel() {  
-                const panel = document.getElementById('property-panel-content');  
-                const item = this.state.config.items.find(i => i.id === this.state.activeItemId);  
-                if (!item) {  
-                    panel.innerHTML = '<p class="text-sm text-gray-400 text-center py-8">要素を選択してください</p>';  
-                    return;  
-                }  
-                let html = `<div class="space-y-4"><div class="text-xs text-gray-500 font-bold border-b pb-1 mb-2">選択中: ${item.label}</div>`;  
-                html += `<div><label class="text-xs text-gray-500">位置 (X, Y)</label><div class="flex gap-2"><input type="number" step="0.1" value="${item.x.toFixed(1)}" onchange="app.updateProp('${item.id}','x',this.value)" class="w-full border rounded p-1"><input type="number" step="0.1" value="${item.y.toFixed(1)}" onchange="app.updateProp('${item.id}','y',this.value)" class="w-full border rounded p-1"></div></div>`;  
-                  
-                if(item.type !== 'qr') {  
-                     html += `<div><label class="text-xs text-gray-500">フォントサイズ</label><input type="number" step="0.1" value="${item.fontSize.toFixed(1)}" onchange="app.updateProp('${item.id}','fontSize',this.value)" class="w-full border rounded p-1"></div>`;  
-                     html += `<div><label class="text-xs text-gray-500">色</label><div class="flex gap-2"><input type="color" value="${item.color}" onchange="app.updateProp('${item.id}','color',this.value)"><input type="text" value="${item.color}" class="w-full border rounded text-xs p-1"></div></div>`;  
-                     html += `<div><label class="text-xs text-gray-500">フォント</label><select onchange="app.updateProp('${item.id}','fontFamily',this.value)" class="w-full border rounded text-xs p-1"><option value="sans-serif" ${item.fontFamily === 'sans-serif' ? 'selected' : ''}>ゴシック</option><option value="serif" ${item.fontFamily === 'serif' ? 'selected' : ''}>明朝</option></select></div>`;  
-                     html += `<label class="flex items-center gap-2 mt-2"><input type="checkbox" ${item.fontWeight==='bold'?'checked':''} onchange="app.updateProp('${item.id}','fontWeight',this.checked?'bold':'normal')"><span class="text-sm">太字</span></label>`;  
-                } else {  
-                     html += `<div><label class="text-xs text-gray-500">サイズ (%)</label><input type="number" value="${item.width.toFixed(1)}" onchange="app.updateProp('${item.id}','width',this.value)" class="w-full border rounded p-1"></div>`;  
-                }  
-                  
-                html += `<div class="text-right pt-4 border-t"><button onclick="app.deleteActiveItem()" class="text-xs text-red-500 underline">削除</button></div></div>`;  
-                panel.innerHTML = html;  
-            },  
-  
-            updateProp(id, prop, val) {  
-                const item = this.state.config.items.find(i=>i.id===id);  
-                if(item) {  
-                    item[prop] = (['x','y','width','fontSize'].includes(prop)) ? parseFloat(val) : val;  
-                    this.renderEditorItems();  
-                }  
-            },  
-            deleteActiveItem() {  
-                 this.state.config.items = this.state.config.items.filter(i => i.id !== this.state.activeItemId);  
-                 this.state.activeItemId = null;  
-                 this.renderEditorItems();  
-            },  
-  
-            // --- Step 4: Preview & Generator ---  
+            // Helper to render a SINGLE item to a small canvas (Chip)    
+            // Returns: { dataUrl: string, x: number, y: number, w: number, h: number } (PDF coords in mm)    
+            renderItemToChip(item, row, drawW, drawH, startX, startY, pdfStartX, pdfStartY, dpiRatio) {    
+                const val = row[item.colIdx] || '';    
+                if (!val) return null;    
+    
+                const itemLeft = startX + (item.x / 100) * drawW;    
+                const itemTop = startY + (item.y / 100) * drawH;    
+                const baseScaleRef = drawW / 800;     
+    
+                // 1. Setup Canvas for this Item    
+                const cvs = document.createElement('canvas');    
+                const ctx = cvs.getContext('2d');    
+                    
+                if (item.type === 'qr') {    
+                    const w_px = (item.width / 100) * drawW;    
+                    // Ensure QR size is high quality but not overkill    
+                    // 500px is enough for print QR usually    
+                    const size = Math.max(500, w_px * 2);     
+                    cvs.width = size;    
+                    cvs.height = size;    
+                        
+                    // Render QR    
+                    const qr = new QRious({    
+                        value: val,    
+                        size: size,    
+                        foreground: 'black',    
+                        background: 'transparent' // Transparent for chip    
+                    });    
+                        
+                    // QRious renders to its own canvas. We need to grab it.    
+                    // Wait, QRious IS a canvas wrapper if we pass element.    
+                    // Let's just use the dataUrl from QRious instance if possible?    
+                    // QRious .toDataURL() exists.    
+                    const qrData = qr.toDataURL('image/png');    
+    
+                    // Return placement info    
+                    // PDF Coords: pdfStartX + itemLeft_in_PDF_units ...    
+                    // itemLeft is in Pixels relative to RenderStage. Need to convert to PDF mm.    
+                    // drawW was calculated based on s.w (mm) converted to px using default DPI in generatePDF loop?    
+                    // No, in generatePDF we will assume 1 px = 1 unit? NO.    
+                    // jsPDF addImage takes (data, fmt, x, y, w, h). w/h in mm.    
+                        
+                    // Conversion Factor: The drawW passed here is in "Export Pixels".    
+                    // We need to map back to mm.    
+                    // The ratio is defined by getContainDimensions logic relative to the PDF Page Width (mm).    
+                        
+                    // Easier: Return the RELATIVE percent positions and let caller map to PDF mm?    
+                    // Actually, let's keep it simple.    
+                    // The caller knows the PDF dimensions (drawW_mm, drawH_mm).    
+                    // We just need to generate the image data.    
+                    return {    
+                        type: 'qr',    
+                        data: qrData,    
+                        xPct: item.x,    
+                        yPct: item.y,    
+                        wPct: item.width // Width in % of Template Width    
+                    };    
+    
+                } else {    
+                    // Text    
+                    const fSize = Math.max(8, item.fontSize * 10 * baseScaleRef);    
+                    const fontStr = `${item.fontWeight} ${fSize}px ${item.fontFamily}`;    
+                    ctx.font = fontStr;    
+                    const metrics = ctx.measureText(val);    
+                    const textW = metrics.width;    
+                    const textH = fSize * 1.5; // Approx height    
+                        
+                    // Create exact size canvas    
+                    cvs.width = textW + 10; // padding    
+                    cvs.height = textH + 10;    
+                        
+                    // Re-apply font context to new canvas    
+                    ctx.font = fontStr;    
+                    ctx.fillStyle = item.color;    
+                    ctx.textBaseline = 'middle';    
+                    ctx.textAlign = 'center';    
+                        
+                    // Draw    
+                    ctx.fillText(val, cvs.width/2, cvs.height/2);    
+                        
+                    return {    
+                        type: 'text',    
+                        data: cvs.toDataURL('image/png'),    
+                        xPct: item.x,    
+                        yPct: item.y,    
+                        // Text doesn't have a fixed % width in config, it's font size based.    
+                        // We need to return the physical dimensions of the generated image to scale it correctly in PDF.    
+                        // The image we just made is (cvs.width) pixels wide at (baseScaleRef) scale.    
+                        pixelW: cvs.width,    
+                        pixelH: cvs.height    
+                    };    
+                }    
+            },    
               
-            getOutputSettings() {  
-                const sizeKey = document.getElementById('opt-paper-size').value;  
-                const orientation = document.querySelector('input[name="opt-orientation"]:checked').value;  
-                const crop = document.getElementById('opt-cropmarks').checked;  
-                const bleed = false;   
-                // Add cmyk setting retrieval  
-                const cmyk = document.getElementById('chk-cmyk-preview-out') ? document.getElementById('chk-cmyk-preview-out').checked : false;  
-                  
-                let base = this.PAPER_SIZES[sizeKey] || this.PAPER_SIZES['a4'];  
-                let w = base.w;  
-                let h = base.h;  
-                  
-                if (orientation === 'landscape') {  
-                    [w, h] = [h, w];  
-                }  
-                  
-                return { w, h, orientation, crop, bleed, cmyk };  
-            },  
-  
-            initPreview() {  
-                document.getElementById('total-records').textContent = this.state.csv.rows.length;  
-                this.updatePreviewSettings();  
-            },  
-  
-            updatePreviewSettings() {  
-                const s = this.getOutputSettings();  
-                const display = document.getElementById('paper-size-display');  
-                  
-                let label = `${s.w} x ${s.h} mm`;  
-                if (s.crop) label += " (+トンボ余白)";  
-                  
-                display.textContent = label;  
-                this.renderSinglePagePreview(0, 'preview-stage-container', s);  
-            },  
-  
-            // Async function to wait for images  
-            async renderPageToDOM(container, rowIdx, settings) {  
-                container.innerHTML = '';  
-                const row = this.state.csv.rows[rowIdx];  
-                  
-                const mmToPx = (mm) => Math.round(mm * 3.7795);  
-                  
-                const baseW_mm = settings.w;  
-                const baseH_mm = settings.h;  
-                const baseW_px = mmToPx(baseW_mm);  
-                const baseH_px = mmToPx(baseH_mm);  
-                  
-                container.style.width = baseW_px + 'px';  
-                container.style.height = baseH_px + 'px';  
-                container.style.position = 'relative';  
-                container.style.overflow = 'hidden';  
-                container.style.backgroundColor = 'white';  
-                  
-                // Create a canvas for the flattened image  
-                const canvas = document.createElement('canvas');  
-                canvas.width = baseW_px;  
-                canvas.height = baseH_px;  
-                const ctx = canvas.getContext('2d');  
-                  
-                // Fill white background  
-                ctx.fillStyle = 'white';  
-                ctx.fillRect(0, 0, canvas.width, canvas.height);  
-  
-                // Load Template Image  
-                const img = new Image();  
-                img.crossOrigin = "Anonymous";  
-                await new Promise((resolve) => {  
-                    img.onload = resolve;  
-                    img.onerror = resolve;  
-                    img.src = this.state.template;  
-                });  
-  
-                // Calculate Dimensions (Contain Logic)  
-                const tmplRatio = this.state.templateRatio || 1;  
-                const paperRatio = baseW_px / baseH_px;  
-                let drawW, drawH, startX, startY;  
-  
-                if (paperRatio > tmplRatio) {  
-                    drawH = baseH_px;  
-                    drawW = drawH * tmplRatio;  
-                    startY = 0;  
-                    startX = (baseW_px - drawW) / 2;  
-                } else {  
-                    drawW = baseW_px;  
-                    drawH = drawW / tmplRatio;  
-                    startX = 0;  
-                    startY = (baseH_px - drawH) / 2;  
-                }  
-  
-                // Draw Template Image  
-                ctx.drawImage(img, startX, startY, drawW, drawH);  
-  
-                // Draw Items  
-                const baseScaleRef = drawW / 800;   
-  
-                for (const item of this.state.config.items) {  
-                    const itemLeft = startX + (item.x / 100) * drawW;  
-                    const itemTop = startY + (item.y / 100) * drawH;  
-  
-                    if (item.type === 'qr') {  
-                        const w = (item.width / 100) * drawW;  
-                        const qrCvs = document.createElement('canvas');  
-                        // Use black for QR generation, colorize later if needed or rely on global filter  
-                        new QRious({   
-                            element: qrCvs,   
-                            value: row[item.colIdx]||'err',   
-                            size: 500,  
-                            foreground: 'black'   
-                        });  
-                          
-                        // Draw QR with white background and padding  
-                        const padding = w * 0.02; // 2% padding  
-                        ctx.fillStyle = 'white';  
-                        ctx.fillRect(itemLeft - w/2, itemTop - w/2, w, w);  
-                        ctx.drawImage(qrCvs, itemLeft - w/2 + padding, itemTop - w/2 + padding, w - padding*2, w - padding*2);  
-  
-                    } else {  
-                        const fSize = Math.max(8, item.fontSize * 10 * baseScaleRef);  
-                        ctx.font = `${item.fontWeight} ${fSize}px ${item.fontFamily}`;  
-                        ctx.fillStyle = item.color;  
-                        ctx.textAlign = 'center';  
-                        ctx.textBaseline = 'middle';  
-                        ctx.fillText(row[item.colIdx] || '', itemLeft, itemTop);  
-                    }  
-                }  
-  
-                // Apply CMYK Simulation to the WHOLE canvas if enabled  
-                if (settings.cmyk) {  
-                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);  
-                    const data = imageData.data;  
-                      
-                    for (let i = 0; i < data.length; i += 4) {  
-                        const r = data[i];  
-                        const g = data[i + 1];  
-                        const b = data[i + 2];  
-                          
-                        // RGB to Hex for simulation function (reuse existing logic)  
-                        const hex = "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);  
-                        const simHex = this.simulateCMYK(hex);  
-                          
-                        // Hex back to RGB  
-                        data[i] = parseInt(simHex.substring(1, 3), 16);  
-                        data[i + 1] = parseInt(simHex.substring(3, 5), 16);  
-                        data[i + 2] = parseInt(simHex.substring(5, 7), 16);  
-                    }  
-                    ctx.putImageData(imageData, 0, 0);  
-                }  
-  
-                // Convert canvas to image and append to container  
-                const finalImg = document.createElement('img');  
-                finalImg.src = canvas.toDataURL('image/jpeg', 0.9);  
-                finalImg.style.width = '100%';  
-                finalImg.style.height = '100%';  
-                container.appendChild(finalImg);  
-            },  
-  
-            async renderSinglePagePreview(rowIdx, containerId, settings) {  
-                const container = document.getElementById(containerId);  
-                const wrapper = document.getElementById('preview-wrapper');  
-                  
-                const stage = document.createElement('div');  
-                await this.renderPageToDOM(stage, rowIdx, settings);  
-                  
-                const stageW = parseFloat(stage.style.width); // e.g. 794px  
-                const stageH = parseFloat(stage.style.height); // e.g. 1123px  
-                  
-                const maxW = wrapper.clientWidth - 40;  
-                const maxH = wrapper.clientHeight - 40;  
-                  
-                const ratio = stageW / stageH;  
-                  
-                let boxW, boxH;  
-                if (maxW / maxH > ratio) {  
-                    boxH = maxH;  
-                    boxW = boxH * ratio;  
-                } else {  
-                    boxW = maxW;  
-                    boxH = boxW / ratio;  
-                }  
-                  
-                container.style.width = `${boxW}px`;  
-                container.style.height = `${boxH}px`;  
-                  
-                stage.style.width = '100%';  
-                stage.style.height = '100%';  
-                  
-                container.innerHTML = '';  
-                container.appendChild(stage);  
-            },  
-  
-            async generatePDF() {  
-                const { jsPDF } = window.jspdf;  
-                const s = this.getOutputSettings();  
-                  
-                const btn = document.getElementById('btn-generate');  
-                const progContainer = document.getElementById('progress-container');  
-                const progBar = document.getElementById('progress-bar');  
-                const progText = document.getElementById('progress-text');  
-                  
-                btn.disabled = true;  
-                btn.classList.add('opacity-50', 'cursor-not-allowed');  
-                progContainer.classList.remove('hidden');  
-  
-                let pdfW = s.w;  
-                let pdfH = s.h;  
-                  
-                const cropMargin = 20;   
-                if (s.crop) {  
-                    pdfW += (cropMargin * 2);  
-                    pdfH += (cropMargin * 2);  
-                }  
-  
-                const doc = new jsPDF({   
-                    orientation: pdfW > pdfH ? 'l' : 'p',   
-                    unit: 'mm',   
-                    format: [pdfW, pdfH]   
-                });  
-                  
-                const stage = document.getElementById('render-stage');  
-                const total = this.state.csv.rows.length;  
-  
-                for (let i = 0; i < total; i++) {  
-                    const pct = Math.round(((i) / total) * 100);  
-                    progBar.style.width = pct + '%';  
-                    progText.textContent = pct + '%';  
-                      
-                    await this.renderPageToDOM(stage, i, s);  
-                      
-                    // Wait slightly for DOM update  
-                    await new Promise(r => setTimeout(r, 50));  
-  
-                    // Since renderPageToDOM now produces a single flat image, we can just grab it  
-                    const imgData = stage.querySelector('img').src;  
-  
-                    if (i > 0) doc.addPage();  
-  
-                    if (s.crop) {  
-                        const imgW = s.w;   
-                        const imgH = s.h;  
-                        const x = (pdfW - imgW) / 2;  
-                        const y = (pdfH - imgH) / 2;  
-                          
-                        doc.addImage(imgData, 'JPEG', x, y, imgW, imgH);  
-                        this.drawCropMarks(doc, x, y, imgW, imgH);  
-                    } else {  
-                        doc.addImage(imgData, 'JPEG', 0, 0, s.w, s.h);  
-                    }  
-                      
-                    stage.innerHTML = '';  
-                    await new Promise(r => setTimeout(r, 0));  
-                }  
-  
-                progBar.style.width = '100%';  
-                progText.textContent = '完了';  
-                doc.save('giftee_merge_export.pdf');  
-  
-                btn.disabled = false;  
-                btn.classList.remove('opacity-50', 'cursor-not-allowed');  
-                setTimeout(() => progContainer.classList.add('hidden'), 2000);  
-            },  
-  
-            // Draw Japanese Style Crop Marks (Tombo)  
-            drawCropMarks(doc, x, y, w, h) {  
-                const len = 5;   
-                const offset = 3;   
-                doc.setDrawColor(0, 0, 0);   
-                doc.setLineWidth(0.1);  
-  
-                // Helper to draw relative to corner  
-                const line = (x1, y1, x2, y2) => doc.line(x1, y1, x2, y2);  
-  
-                // Top Left  
-                line(x - len, y, x - offset, y);   
-                line(x, y - len, x, y - offset);   
-                  
-                // Top Right  
-                line(x + w + offset, y, x + w + len, y);  
-                line(x + w, y - offset, x + w, y - len);  
-  
-                // Bottom Left  
-                line(x - len, y + h, x - offset, y + h);  
-                line(x, y + h + offset, x, y + h + len);  
-  
-                // Bottom Right  
-                line(x + w + offset, y + h, x + w + len, y + h);  
-                line(x + w, y + h + offset, x + w, y + h + len);  
-            },  
-  
-            resetAll() {  
-                if(confirm('リセットしますか？')) location.reload();  
-            },  
-              
-            zoom(delta) {}   
-        };  
-  
-        window.onload = () => app.init();  
-    </script>  
-</body>  
+            // Generate Master Template for Background    
+            // Returns DataURL and Alias    
+            async prepareMasterTemplate(s) {    
+                if (!this.state.template) return null;    
+    
+                // If CMYK is OFF, we can just use the original template string!    
+                // This is the most efficient method.    
+                if (!s.cmyk) {    
+                     return { data: this.state.template, alias: 'MASTER_TEMPLATE_RAW', type: this.state.templateType };    
+                }    
+    
+                // If CMYK is ON, we must process it once.    
+                // Create a canvas sized to the template's natural size or reasonable high res    
+                // We use the templateRatio logic to match the PDF output resolution?    
+                // Actually, just loading the image and filtering it is enough.    
+                const img = new Image();    
+                img.crossOrigin = "Anonymous";    
+                await new Promise(r => { img.onload=r; img.src=this.state.template; });    
+                    
+                const cvs = document.createElement('canvas');    
+                cvs.width = img.width;    
+                cvs.height = img.height;    
+                const ctx = cvs.getContext('2d');    
+                ctx.drawImage(img, 0, 0);    
+                    
+                // Apply CMYK Filter    
+                const imageData = ctx.getImageData(0, 0, cvs.width, cvs.height);    
+                const data = imageData.data;    
+                for (let i = 0; i < data.length; i += 4) {    
+                    const r = data[i]; const g = data[i + 1]; const b = data[i + 2];    
+                    const hex = "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);    
+                    const simHex = this.simulateCMYK(hex);    
+                    data[i] = parseInt(simHex.substring(1, 3), 16);    
+                    data[i + 1] = parseInt(simHex.substring(3, 5), 16);    
+                    data[i + 2] = parseInt(simHex.substring(5, 7), 16);    
+                }    
+                ctx.putImageData(imageData, 0, 0);    
+                    
+                return { data: cvs.toDataURL('image/jpeg', 0.95), alias: 'MASTER_TEMPLATE_CMYK', type: 'JPEG' };    
+            },    
+    
+            async generatePDF() {    
+                const { jsPDF } = window.jspdf;    
+                const s = this.getOutputSettings();    
+                    
+                const btn = document.getElementById('btn-generate');    
+                const progContainer = document.getElementById('progress-container');    
+                const progBar = document.getElementById('progress-bar');    
+                const progText = document.getElementById('progress-text');    
+                    
+                btn.disabled = true;    
+                btn.classList.add('opacity-50', 'cursor-not-allowed');    
+                progContainer.classList.remove('hidden');    
+    
+                let pdfW = s.w;    
+                let pdfH = s.h;    
+                    
+                const cropMargin = 20;     
+                if (s.crop) {    
+                    pdfW += (cropMargin * 2);    
+                    pdfH += (cropMargin * 2);    
+                }    
+    
+                // 1. Create Doc    
+                const doc = new jsPDF({     
+                    orientation: pdfW > pdfH ? 'l' : 'p',     
+                    unit: 'mm',     
+                    format: [pdfW, pdfH]     
+                });    
+    
+                // 2. Prepare Background Template (One-Time)    
+                const masterTmpl = await this.prepareMasterTemplate(s);    
+                    
+                // Calculate Layout Constants    
+                // This logic mirrors getContainDimensions but for the PDF mm units directly    
+                const tmplRatio = this.state.templateRatio || 1;    
+                const paperRatio = s.w / s.h;    
+                let drawW_mm, drawH_mm, startX_mm, startY_mm;    
+    
+                if (paperRatio > tmplRatio) {    
+                    drawH_mm = s.h;    
+                    drawW_mm = drawH_mm * tmplRatio;    
+                    startY_mm = 0;    
+                    startX_mm = (s.w - drawW_mm) / 2;    
+                } else {    
+                    drawW_mm = s.w;    
+                    drawH_mm = drawW_mm / tmplRatio;    
+                    startX_mm = 0;    
+                    startY_mm = (s.h - drawH_mm) / 2;    
+                }    
+                    
+                const pdfOriginX = s.crop ? (pdfW - s.w) / 2 : 0;    
+                const pdfOriginY = s.crop ? (pdfH - s.h) / 2 : 0;    
+                const finalTmplX = pdfOriginX + startX_mm;    
+                const finalTmplY = pdfOriginY + startY_mm;    
+                    
+                // Helper to map pixel size from "High Res Export Canvas" to PDF mm    
+                // We need a reference pixel width to scale text properly.    
+                // In renderPageToDOM, we used: baseScaleRef = drawW (px) / 800.    
+                // Here, we don't have a "canvas width" in pixels per se.    
+                // BUT, to keep font sizes consistent with the Preview, we should assume the "Calculation Canvas"     
+                // had a specific resolution.    
+                // Let's assume the Export DPI (300) logic from renderPageToDOM.    
+                const exportDPI = 300; // Base    
+                const mmToPx = (mm) => mm * (exportDPI / 25.4);    
+                const drawW_px_ref = mmToPx(drawW_mm);    
+                    
+                const total = this.state.csv.rows.length;    
+    
+                for (let i = 0; i < total; i++) {    
+                    const pct = Math.round(((i) / total) * 100);    
+                    progBar.style.width = pct + '%';    
+                    progText.textContent = pct + '%';    
+                    // Yield to UI    
+                    await new Promise(r => setTimeout(r, 0));    
+    
+                    if (i > 0) doc.addPage();    
+    
+                    // A. Add Background (Using Alias to save memory!)    
+                    if (masterTmpl) {    
+                        // doc.addImage(data, format, x, y, w, h, alias, compression, rotation)    
+                        doc.addImage(    
+                            masterTmpl.data,     
+                            masterTmpl.type,     
+                            finalTmplX,     
+                            finalTmplY,     
+                            drawW_mm,     
+                            drawH_mm,    
+                            masterTmpl.alias, // ALIAS IS KEY    
+                            'FAST'    
+                        );    
+                    }    
+    
+                    // B. Add Items (As small chips)    
+                    const row = this.state.csv.rows[i];    
+                    for (const item of this.state.config.items) {    
+                         const chip = this.renderItemToChip(item, row, drawW_px_ref, mmToPx(drawH_mm), 0, 0, 0, 0, 0);    
+                         if (!chip) continue;    
+                             
+                         // Calculate Position on PDF (mm)    
+                         const itemCenterX_mm = finalTmplX + (chip.xPct / 100) * drawW_mm;    
+                         const itemCenterY_mm = finalTmplY + (chip.yPct / 100) * drawH_mm;    
+                             
+                         if (chip.type === 'qr') {    
+                             const w_mm = (chip.wPct / 100) * drawW_mm;    
+                             // QR is square    
+                             doc.addImage(chip.data, 'PNG', itemCenterX_mm - w_mm/2, itemCenterY_mm - w_mm/2, w_mm, w_mm);    
+                         } else {    
+                             // Text    
+                             // We have chip.pixelW and chip.pixelH from a 300DPI canvas.    
+                             // Convert back to mm for PDF placement.    
+                             const chipW_mm = chip.pixelW * (25.4 / exportDPI);    
+                             const chipH_mm = chip.pixelH * (25.4 / exportDPI);    
+                                 
+                             doc.addImage(chip.data, 'PNG', itemCenterX_mm - chipW_mm/2, itemCenterY_mm - chipH_mm/2, chipW_mm, chipH_mm);    
+                         }    
+                    }    
+    
+                    // C. Crop Marks    
+                    if (s.crop) {    
+                        this.drawCropMarks(doc, pdfOriginX, pdfOriginY, s.w, s.h);    
+                    }    
+                }    
+    
+                progBar.style.width = '100%';    
+                progText.textContent = '完了';    
+                doc.save('giftee_merge_export.pdf');    
+    
+                btn.disabled = false;    
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');    
+                setTimeout(() => progContainer.classList.add('hidden'), 2000);    
+            },    
+    
+            // Draw Japanese Style Crop Marks (Tombo)    
+            drawCropMarks(doc, x, y, w, h) {    
+                const len = 5;     
+                const offset = 3;     
+                doc.setDrawColor(0, 0, 0);     
+                doc.setLineWidth(0.1);    
+    
+                // Helper to draw relative to corner    
+                const line = (x1, y1, x2, y2) => doc.line(x1, y1, x2, y2);    
+    
+                // Top Left    
+                line(x - len, y, x - offset, y);     
+                line(x, y - len, x, y - offset);     
+                    
+                // Top Right    
+                line(x + w + offset, y, x + w + len, y);    
+                line(x + w, y - offset, x + w, y - len);    
+    
+                // Bottom Left    
+                line(x - len, y + h, x - offset, y + h);    
+                line(x, y + h + offset, x, y + h + len);    
+    
+                // Bottom Right    
+                line(x + w + offset, y + h, x + w + len, y + h);    
+                line(x + w, y + h + offset, x + w, y + h + len);    
+            },    
+    
+            resetAll() {    
+                if(confirm('リセットしますか？')) location.reload();    
+            },    
+                
+            zoom(delta) {}     
+        };    
+    
+        window.onload = () => app.init();    
+    </script>    
+</body>    
 </html>  
